@@ -1,0 +1,18 @@
+load("@rules_rs//rs:rust_binary.bzl", "rust_binary")
+
+rust_binary(
+    name = "razemify-cli",
+    srcs = glob(["src/**/*.rs"]),
+    data = ["//third_party/onnxruntime"],
+    edition = "2021",
+    env = {
+        "ORT_DYLIB_PATH": "$(rootpath //third_party/onnxruntime)",
+    },
+    visibility = ["//visibility:public"],
+    deps = [
+        "//razemify-core:razemify_core_rembg",
+        "@crates//:clap",
+        "@crates//:image",
+        "@crates//:rayon",
+    ],
+)

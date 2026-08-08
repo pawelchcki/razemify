@@ -2,7 +2,6 @@ import 'dart:ffi' as ffi;
 import 'dart:isolate';
 import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
-import 'package:image/image.dart' as img;
 
 import 'ffi_bindings.dart';
 import 'models.dart';
@@ -109,8 +108,8 @@ class Razemify {
       errorCode = RazemifyBindings.processBytes(
         inputPtr,
         params.imageBytes.length,
-        outputPtr,      // Pass pre-allocated output buffer
-        widthPtr,       // Rust will write dimensions here
+        outputPtr, // Pass pre-allocated output buffer
+        widthPtr, // Rust will write dimensions here
         heightPtr,
         presetPtr,
         palettePtr,
@@ -124,9 +123,7 @@ class Razemify {
       }
 
       // Step 6: Copy RGB data from native buffer to Dart
-      final rgbData = Uint8List.fromList(
-        outputPtr.asTypedList(outputSize),
-      );
+      final rgbData = Uint8List.fromList(outputPtr.asTypedList(outputSize));
 
       stopwatch.stop();
 

@@ -354,7 +354,7 @@ fn cmd_batch(
     }
 
     // Sort: images with most pending presets first (new images before partially done ones)
-    image_work.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+    image_work.sort_by_key(|work| std::cmp::Reverse(work.1.len()));
 
     let total_skipped = pre_skipped;
 

@@ -1,0 +1,27 @@
+load("@rules_flutter//flutter:defs.bzl", "dart_format_test", "flutter_analyze_test", "flutter_library")
+
+flutter_library(
+    name = "flutter_razemify",
+    srcs = glob(["lib/**"]),
+    pubspec = "pubspec.yaml",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@flutter_sdk//flutter/packages/flutter",
+        "@pub_ffi//:ffi",
+        # Dev-only, but analysis_options.yaml includes its lint set, so the
+        # analyzer needs it resolvable in the package config.
+        "@pub_flutter_lints//:flutter_lints",
+        "@pub_image//:image",
+    ],
+)
+
+flutter_analyze_test(
+    name = "analyze",
+    srcs = ["analysis_options.yaml"],
+    embed = [":flutter_razemify"],
+)
+
+dart_format_test(
+    name = "format",
+    srcs = glob(["lib/**/*.dart"]),
+)

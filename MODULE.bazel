@@ -1,0 +1,133 @@
+module(
+    name = "razemify",
+    version = "0.1.0",
+)
+
+bazel_dep(name = "rules_rs", version = "0.0.102")
+bazel_dep(name = "llvm", version = "0.8.16")
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "rules_flutter", version = "0.0.0")
+local_path_override(
+    module_name = "rules_flutter",
+    path = "../../rules_flutter/main",
+)
+
+toolchains = use_extension("@rules_rs//rs/toolchains:module_extension.bzl", "toolchains")
+toolchains.toolchain(
+    edition = "2021",
+    version = "1.97.1",
+)
+use_repo(toolchains, "default_rust_toolchains")
+
+register_toolchains(
+    "@default_rust_toolchains//:all",
+    "@llvm//toolchain:all",
+)
+
+crate = use_extension("@rules_rs//rs:extensions.bzl", "crate")
+crate.from_cargo(
+    name = "crates",
+    cargo_lock = "//:Cargo.lock",
+    cargo_toml = "//:Cargo.toml",
+    platform_triples = [
+        "x86_64-unknown-linux-gnu",
+        "aarch64-unknown-linux-gnu",
+        "aarch64-apple-darwin",
+        "wasm32-unknown-unknown",
+        # Android triples are resolved so @crates targets exist for them;
+        # linking an Android cdylib still needs an NDK cc toolchain (follow-up).
+        "aarch64-linux-android",
+        "armv7-linux-androideabi",
+        "i686-linux-android",
+        "x86_64-linux-android",
+    ],
+)
+
+# razemify-core uses ort with `load-dynamic`, which turns on
+# ort-sys/disable-linking: the build script would exit without doing anything,
+# so skip compiling it entirely. The ONNX Runtime dylib is provided at runtime
+# via ORT_DYLIB_PATH (see //third_party/onnxruntime).
+crate.annotation(
+    crate = "ort-sys",
+    gen_build_script = "off",
+)
+
+# Our own wasm-bindgen CLI universe: the CLI's schema version must match the
+# wasm-bindgen crate version in //:Cargo.lock, and the toolchain bundled with
+# rules_rs lags behind. Keep third_party/wasm_bindgen/Cargo.toml in lockstep
+# with the workspace's wasm-bindgen version.
+crate.from_cargo(
+    name = "wbd",
+    cargo_lock = "//third_party/wasm_bindgen:Cargo.lock",
+    cargo_toml = "//third_party/wasm_bindgen:Cargo.toml",
+    platform_triples = [
+        "x86_64-unknown-linux-gnu",
+        "aarch64-unknown-linux-gnu",
+        "aarch64-apple-darwin",
+        "wasm32-unknown-unknown",
+    ],
+)
+crate.annotation(
+    crate = "wasm-bindgen-cli",
+    gen_binaries = ["wasm-bindgen"],
+    repositories = ["wbd"],
+)
+use_repo(crate, "crates", "wbd")
+
+wasm_bindgen = use_extension("@rules_rs//rs:rules_rust_wasm_bindgen.bzl", "rules_rust_wasm_bindgen")
+use_repo(wasm_bindgen, "rules_rust_wasm_bindgen")
+
+# Ours first: toolchain resolution picks the first registered match.
+register_toolchains(
+    "//third_party/wasm_bindgen:wasm_bindgen_toolchain",
+    "@rules_rust_wasm_bindgen//:default_wasm_bindgen_toolchain",
+)
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+# ONNX Runtime version must match what the resolved ort-sys crate pins
+# (build/download/dist.tsv in the ort-sys sources): ort-sys 2.0.0-rc.13 -> 1.28.0.
+http_archive(
+    name = "onnxruntime_linux_x64",
+    build_file = "//third_party/onnxruntime:onnxruntime.BUILD",
+    sha256 = "a3e1b79d7bb1bf09696ce675f49e4064e6c81f6202b8225624fff0e93f8d6407",
+    strip_prefix = "onnxruntime-linux-x64-1.28.0",
+    url = "https://github.com/microsoft/onnxruntime/releases/download/v1.28.0/onnxruntime-linux-x64-1.28.0.tgz",
+)
+
+http_archive(
+    name = "onnxruntime_linux_aarch64",
+    build_file = "//third_party/onnxruntime:onnxruntime.BUILD",
+    sha256 = "e15ff8b5d85afe6c144d97c6fd432254bf76a219daaf17658087d6ecb3e8f0bb",
+    strip_prefix = "onnxruntime-linux-aarch64-1.28.0",
+    url = "https://github.com/microsoft/onnxruntime/releases/download/v1.28.0/onnxruntime-linux-aarch64-1.28.0.tgz",
+)
+
+http_archive(
+    name = "onnxruntime_osx_arm64",
+    build_file = "//third_party/onnxruntime:onnxruntime.BUILD",
+    sha256 = "1268b359718099bde2cedb55787f182a130067bc4f31e8c88478c445b850d3d8",
+    strip_prefix = "onnxruntime-osx-arm64-1.28.0",
+    url = "https://github.com/microsoft/onnxruntime/releases/download/v1.28.0/onnxruntime-osx-arm64-1.28.0.tgz",
+)
+
+flutter = use_extension("@rules_flutter//flutter:extensions.bzl", "flutter")
+flutter.toolchain(flutter_version = "3.44.7")
+use_repo(flutter, "flutter_sdk", "flutter_toolchains")
+
+register_toolchains("@flutter_toolchains//:all")
+
+# Repos come from the checked-in pub_deps.json files; regenerate those with
+# `bazel run //flutter_razemify:flutter_razemify.update` (and the example's
+# `//flutter_razemify/example:lib.update`) and list any new direct dependency
+# here. `bazel mod tidy` cannot fill this in: the pub extension does not
+# declare root_module_direct_deps.
+pub = use_extension("@rules_flutter//flutter:extensions.bzl", "pub")
+use_repo(
+    pub,
+    "pub_cupertino_icons",
+    "pub_ffi",
+    "pub_flutter_lints",
+    "pub_image",
+    "pub_image_picker",
+)

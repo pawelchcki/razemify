@@ -1,0 +1,6 @@
+# Per-workspace BuildBuddy credentials. Copy to user.bazelrc (gitignored) and
+# fill in your API key from https://app.buildbuddy.io/settings/org/api-keys
+#
+# Alternatively, set the key once for every workspace on the machine by putting
+# this same line in ~/.bazelrc (chmod 600 — it is a credential).
+build --remote_header=x-buildbuddy-api-key=YOUR_KEY_HERE

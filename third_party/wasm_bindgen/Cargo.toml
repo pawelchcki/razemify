@@ -1,0 +1,17 @@
+# Standalone crate universe for the wasm-bindgen CLI. The CLI schema version
+# must match the wasm-bindgen crate version the workspace links against
+# (see wasm-bindgen in //:Cargo.lock); rules_rs's bundled default toolchain
+# lags behind, so we build our own CLI and register our own toolchain.
+[package]
+name = "direct-cargo-bazel-deps"
+version = "0.0.1"
+edition = "2021"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+wasm-bindgen-cli = "=0.2.126"
+
+[workspace]

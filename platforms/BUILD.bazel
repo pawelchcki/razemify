@@ -1,0 +1,17 @@
+# Execution platform for BuildBuddy remote execution (--config=remote).
+#
+# container-image pins BuildBuddy's stock Ubuntu 20.04 RBE image rather than a
+# custom one: the default executor image carries a glibc older than 2.25, but
+# binaries from the hermetic llvm/Rust toolchains (process_wrapper among them)
+# need >= 2.28, so builds there die with "GLIBC_2.28 not found".
+platform(
+    name = "rbe_linux_x86_64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+    exec_properties = {
+        "OSFamily": "Linux",
+        "container-image": "docker://gcr.io/flame-public/rbe-ubuntu20-04:latest",
+    },
+)

@@ -1,0 +1,28 @@
+load("@rules_flutter//flutter:defs.bzl", "flutter_library", "flutter_test")
+
+# No flutter_app target: the APK is still built through Gradle, which also
+# supplies the Android .so via the cargo shim.
+flutter_library(
+    name = "lib",
+    srcs = glob(["lib/**"]),
+    pubspec = "pubspec.yaml",
+    deps = [
+        "//flutter_razemify",
+        "@flutter_sdk//flutter/packages/flutter",
+        "@flutter_sdk//flutter/packages/flutter_test",
+        # Dev-only, but flutter_tools resolves the whole pubspec closure from
+        # package_graph.json when building the test asset bundle, so every
+        # declared dependency must also appear in package_config.json.
+        "@flutter_sdk//flutter/packages/integration_test",
+        "@pub_cupertino_icons//:cupertino_icons",
+        "@pub_flutter_lints//:flutter_lints",
+        "@pub_image_picker//:image_picker",
+    ],
+)
+
+# integration_test/ is not Bazelified: it needs a real device or emulator.
+flutter_test(
+    name = "widget_test",
+    srcs = glob(["test/**"]),
+    embed = [":lib"],
+)

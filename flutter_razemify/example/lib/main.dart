@@ -90,10 +90,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
@@ -202,18 +199,12 @@ class _MyHomePageState extends State<MyHomePage> {
                 children: [
                   const Text(
                     'Original',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.memory(
-                      _originalImage!,
-                      fit: BoxFit.contain,
-                    ),
+                    child: Image.memory(_originalImage!, fit: BoxFit.contain),
                   ),
                   const SizedBox(height: 24),
                 ],
@@ -225,18 +216,12 @@ class _MyHomePageState extends State<MyHomePage> {
                 children: [
                   const Text(
                     'Processed',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.memory(
-                      _processedImage!,
-                      fit: BoxFit.contain,
-                    ),
+                    child: Image.memory(_processedImage!, fit: BoxFit.contain),
                   ),
                 ],
               ),
