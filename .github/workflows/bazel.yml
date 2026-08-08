@@ -60,6 +60,30 @@ jobs:
       - name: Test everything
         run: bazel test //...
 
+      # Remote execution, as opposed to the remote cache the steps above use.
+      # --noremote_accept_cached is the point: without it a warm cache serves
+      # nearly every action and the run proves nothing about whether anything
+      # executed remotely. Rust targets only -- rules_flutter tags its
+      # host-bound actions no-remote-exec, so those stay local by design.
+      - name: Verify remote execution
+        env:
+          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
+        run: |
+          if [ -z "$BUILDBUDDY_API_KEY" ]; then
+            echo "No API key available; skipping remote execution check"
+            exit 0
+          fi
+          bazel build --config=remote --noremote_accept_cached \
+            //razemify-core/... //razemify-cli/... //xtask/... 2>&1 | tee rbe.log
+          # "N remote" in the process breakdown is the actual evidence; a
+          # cache-served or locally-run build would report something else.
+          REMOTE=$(sed -n 's/.*[^0-9]\([0-9]\+\) remote[.,].*/\1/p' rbe.log | tail -1)
+          echo "actions executed remotely: ${REMOTE:-0}"
+          if [ -z "$REMOTE" ] || [ "$REMOTE" -lt 100 ]; then
+            echo "::error::remote execution did not run (expected >=100 remote actions)"
+            exit 1
+          fi
+
       # The Flutter analyze/format gates and the example widget test are the
       # part Cargo cannot cover, so surface their logs when they fail.
       - name: Show test logs on failure
