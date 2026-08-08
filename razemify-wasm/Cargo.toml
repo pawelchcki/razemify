@@ -19,3 +19,23 @@ features = ["console"]
 
 [features]
 default = ["console_error_panic_hook"]
+
+# rustc enables bulk-memory, nontrapping-fptoint, multivalue, reference-types
+# and sign-ext by default for wasm32-unknown-unknown (check with
+# `rustc --print cfg --target wasm32-unknown-unknown`), but the wasm-opt that
+# wasm-pack downloads validates with all features off and rejects the output:
+#
+#   [wasm-validator error] unexpected false: Bulk memory operations require
+#   bulk memory [--enable-bulk-memory]
+#
+# Allow exactly the features rustc emits, rather than dropping to
+# `wasm-opt = false` and giving up the size optimization.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = [
+    "-O",
+    "--enable-bulk-memory",
+    "--enable-nontrapping-float-to-int",
+    "--enable-multivalue",
+    "--enable-reference-types",
+    "--enable-sign-ext",
+]
