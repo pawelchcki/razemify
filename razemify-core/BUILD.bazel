@@ -50,3 +50,10 @@ rust_test(
     name = "razemify_core_test",
     crate = ":razemify_core",
 )
+
+# The same unit tests against the feature-enabled build, which is what
+# `cargo test --workspace` exercises (razemify-cli turns on rembg).
+rust_test(
+    name = "razemify_core_rembg_test",
+    crate = ":razemify_core_rembg",
+)

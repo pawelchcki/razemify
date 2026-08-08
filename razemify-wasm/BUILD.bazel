@@ -6,6 +6,8 @@ rust_shared_library(
     srcs = glob(["src/**/*.rs"]),
     crate_features = ["console_error_panic_hook"],
     edition = "2021",
+    # Visible so the root //:clippy and //:rustfmt gates can reach it.
+    visibility = ["//:__pkg__"],
     deps = [
         "//razemify-core:razemify_core",
         "@crates//:console_error_panic_hook",

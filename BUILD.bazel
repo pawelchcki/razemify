@@ -1,7 +1,34 @@
+load("@rules_rust//rust:defs.bzl", "rust_clippy", "rustfmt_test")
+
 exports_files(
     [
         "Cargo.toml",
         "Cargo.lock",
     ],
     visibility = ["//visibility:public"],
+)
+
+# Rust lint and format gates, so CI needs no cargo/rustup toolchain.
+# Equivalent to `cargo clippy --workspace -- -D warnings` and
+# `cargo fmt --all --check`; see .bazelrc for the deny-warnings flag.
+_RUST_TARGETS = [
+    "//flutter_razemify/rust:flutter_razemify_shared",
+    "//flutter_razemify/rust:flutter_razemify_static",
+    "//razemify-cli",
+    "//razemify-core:razemify_core",
+    "//razemify-core:razemify_core_flutter",
+    "//razemify-core:razemify_core_rembg",
+    "//razemify-wasm:razemify_wasm_cdylib",
+    "//xtask",
+]
+
+rust_clippy(
+    name = "clippy",
+    testonly = True,
+    deps = _RUST_TARGETS,
+)
+
+rustfmt_test(
+    name = "rustfmt",
+    targets = _RUST_TARGETS,
 )

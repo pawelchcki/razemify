@@ -31,6 +31,11 @@ register_toolchains(
     "@llvm//toolchain:all",
 )
 
+# rules_rs wraps the rules_rust build rules but does not re-export its
+# rustfmt/clippy aspects, so pull the same pinned repo in directly for those.
+rules_rust = use_extension("@rules_rs//rs:rules_rust.bzl", "rules_rust")
+use_repo(rules_rust, "rules_rust")
+
 crate = use_extension("@rules_rs//rs:extensions.bzl", "crate")
 crate.from_cargo(
     name = "crates",

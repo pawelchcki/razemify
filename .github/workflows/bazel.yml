@@ -21,30 +21,51 @@ jobs:
           sudo mv "$RUNNER_TEMP/bazel" /usr/local/bin/bazel
           bazel version
 
+      # The repository cache holds the fetched archives -- Flutter SDK, Rust
+      # toolchains, ONNX Runtime, every crate -- which the BuildBuddy action
+      # cache does not cover, because repository rules run outside the action
+      # graph. MODULE.bazel.lock pins what gets fetched, so it keys the cache.
+      - name: Cache Bazel repository downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel-repo
+          key: bazel-repo-${{ runner.os }}-${{ hashFiles('MODULE.bazel.lock', '.bazelversion') }}
+          restore-keys: |
+            bazel-repo-${{ runner.os }}-
+
       # user.bazelrc is gitignored and try-imported by .bazelrc. Without a key,
       # remote cache and BES are switched off rather than left to fail against
       # BuildBuddy anonymously — pull requests from forks get no secrets.
-      - name: Configure BuildBuddy
+      - name: Configure Bazel
         env:
           BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
         run: |
+          echo "common --repository_cache=$HOME/.cache/bazel-repo" > user.bazelrc
           if [ -n "$BUILDBUDDY_API_KEY" ]; then
-            echo "build --remote_header=x-buildbuddy-api-key=$BUILDBUDDY_API_KEY" > user.bazelrc
+            echo "build --remote_header=x-buildbuddy-api-key=$BUILDBUDDY_API_KEY" >> user.bazelrc
             echo "BuildBuddy remote cache enabled"
           else
             {
               echo "build --remote_cache="
               echo "build --bes_backend="
               echo "build --bes_results_url="
-            } > user.bazelrc
+            } >> user.bazelrc
             echo "No API key available; building without remote cache"
           fi
 
       - name: Build everything
         run: bazel build //...
 
+      # Covers the Rust unit tests, the Flutter analyze/format gates, the
+      # example widget test, and //:rustfmt.
       - name: Test everything
         run: bazel test //...
+
+      # Separate from the test run because rust_clippy is a build rule, not a
+      # test. .bazelrc sets clippy_flag=-Dwarnings so this fails on any lint,
+      # matching `cargo clippy -- -D warnings`.
+      - name: Clippy
+        run: bazel build //:clippy
 
       # Remote execution, as opposed to the remote cache the steps above use.
       # --noremote_accept_cached is the point: without it a warm cache serves

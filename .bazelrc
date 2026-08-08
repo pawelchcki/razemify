@@ -12,6 +12,10 @@ build --remote_download_toplevel
 build --nolegacy_important_outputs
 build --bes_upload_mode=fully_async
 
+# //:clippy is a gate, so warnings must fail it -- the equivalent of
+# `cargo clippy -- -D warnings`.
+build --@rules_rust//rust/settings:clippy_flag=-Dwarnings
+
 build:opt --compilation_mode=opt
 
 # Remote execution is opt-in: `bazel build --config=remote ...`.
