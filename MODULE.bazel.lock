@@ -293,7 +293,7 @@
     },
     "@@rules_flutter+//flutter:extensions.bzl%flutter": {
       "general": {
-        "bzlTransitiveDigest": "VYoTkT8veuGMiaO8Lo5A3WEYmvwxvby/bkrnxRQhMC4=",
+        "bzlTransitiveDigest": "IgQ16avS1uVY34xIdYqncwEjA8nXAEm+AlALYB6FCAo=",
         "usagesDigest": "OQt4SZjsV1ClP6tfY8TB4qOf34BPLgucA0EgdYeX/h4=",
         "recordedInputs": [
           "ENV:ACCEPTED_ANDROID_NDK_LICENSE_VERSION 28.2.13676358",

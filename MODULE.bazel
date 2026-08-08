@@ -15,7 +15,7 @@ bazel_dep(name = "rules_flutter", version = "0.0.0")
 # checkout when developing the ruleset itself.
 git_override(
     module_name = "rules_flutter",
-    commit = "87c95fdb78c1318e51ab6c091219c2b9167c1310",
+    commit = "21c8082509bd3d377276c74153139fe6aafae756",
     patch_strip = 1,
     patches = ["//third_party/rules_flutter:stage_path_dependencies.patch"],
     remote = "https://github.com/pawelchcki/rules_flutter.git",
