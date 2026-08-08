@@ -6,15 +6,13 @@ flutter_library(
     pubspec = "pubspec.yaml",
     deps = [
         "//flutter_razemify",
+        "@flutter_razemify_example_deps//:all",
         "@flutter_sdk//flutter/packages/flutter",
         "@flutter_sdk//flutter/packages/flutter_test",
         # Dev-only, but flutter_tools resolves the whole pubspec closure from
         # package_graph.json when building the test asset bundle, so every
         # declared dependency must also appear in package_config.json.
         "@flutter_sdk//flutter/packages/integration_test",
-        "@pub_cupertino_icons//:cupertino_icons",
-        "@pub_flutter_lints//:flutter_lints",
-        "@pub_image_picker//:image_picker",
     ],
 )
 
@@ -24,12 +22,10 @@ flutter_library(
     pubspec = "pubspec.yaml",
     deps = [
         "//flutter_razemify:flutter_razemify_android_debug",
+        "@flutter_razemify_example_deps//:all",
         "@flutter_sdk//flutter/packages/flutter",
         "@flutter_sdk//flutter/packages/flutter_test",
         "@flutter_sdk//flutter/packages/integration_test",
-        "@pub_cupertino_icons//:cupertino_icons",
-        "@pub_flutter_lints//:flutter_lints",
-        "@pub_image_picker//:image_picker",
     ],
 )
 
@@ -39,12 +35,10 @@ flutter_library(
     pubspec = "pubspec.yaml",
     deps = [
         "//flutter_razemify:flutter_razemify_android_release",
+        "@flutter_razemify_example_deps//:all",
         "@flutter_sdk//flutter/packages/flutter",
         "@flutter_sdk//flutter/packages/flutter_test",
         "@flutter_sdk//flutter/packages/integration_test",
-        "@pub_cupertino_icons//:cupertino_icons",
-        "@pub_flutter_lints//:flutter_lints",
-        "@pub_image_picker//:image_picker",
     ],
 )
 

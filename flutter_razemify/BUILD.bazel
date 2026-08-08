@@ -6,12 +6,8 @@ flutter_library(
     pubspec = "pubspec.yaml",
     visibility = ["//visibility:public"],
     deps = [
+        "@flutter_razemify_deps//:all",
         "@flutter_sdk//flutter/packages/flutter",
-        "@pub_ffi//:ffi",
-        # Dev-only, but analysis_options.yaml includes its lint set, so the
-        # analyzer needs it resolvable in the package config.
-        "@pub_flutter_lints//:flutter_lints",
-        "@pub_image//:image",
     ],
 )
 
@@ -27,10 +23,8 @@ flutter_library(
     pubspec = "pubspec.yaml",
     visibility = ["//visibility:public"],
     deps = [
+        "@flutter_razemify_deps//:all",
         "@flutter_sdk//flutter/packages/flutter",
-        "@pub_ffi//:ffi",
-        "@pub_flutter_lints//:flutter_lints",
-        "@pub_image//:image",
     ],
 )
 
@@ -49,10 +43,8 @@ flutter_library(
     pubspec = "pubspec.yaml",
     visibility = ["//visibility:public"],
     deps = [
+        "@flutter_razemify_deps//:all",
         "@flutter_sdk//flutter/packages/flutter",
-        "@pub_ffi//:ffi",
-        "@pub_flutter_lints//:flutter_lints",
-        "@pub_image//:image",
     ],
 )
 

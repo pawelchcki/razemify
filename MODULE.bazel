@@ -107,6 +107,7 @@ register_toolchains(
 )
 
 http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
 maven_repository = use_repo_rule("//third_party/android_maven:maven_repository.bzl", "maven_repository")
 
 maven_repository(
@@ -164,21 +165,13 @@ register_toolchains(
     "@flutter_toolchains//:all",
 )
 
-# Repos come from the checked-in pub_deps.json files; regenerate those with
-# `bazel run //flutter_razemify:flutter_razemify.update` (and the example's
-# `//flutter_razemify/example:lib.update`) and list any new direct dependency
-# here. `bazel mod tidy` cannot fill this in: the pub extension does not
-# declare root_module_direct_deps.
 pub = use_extension("@rules_flutter//flutter:extensions.bzl", "pub")
-pub.deps_manifest(files = [
-    "//flutter_razemify:pub_deps.json",
-    "//flutter_razemify/example:pub_deps.json",
-])
-use_repo(
-    pub,
-    "pub_cupertino_icons",
-    "pub_ffi",
-    "pub_flutter_lints",
-    "pub_image",
-    "pub_image_picker",
+pub.lock(
+    name = "flutter_razemify_deps",
+    file = "//flutter_razemify:pubspec.lock",
 )
+pub.lock(
+    name = "flutter_razemify_example_deps",
+    file = "//flutter_razemify/example:pubspec.lock",
+)
+use_repo(pub, "flutter_razemify_deps", "flutter_razemify_example_deps", "pub_fixnum", "pub_meta", "pub_path", "pub_protobuf", "pub_protoc_plugin")
