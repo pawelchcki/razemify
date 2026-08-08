@@ -1,0 +1,68 @@
+name: Bazel
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  # MODULE.bazel consumes the rules_flutter fork through local_path_override at
+  # ../../rules_flutter/main, which sits outside $GITHUB_WORKSPACE and so cannot
+  # be placed by actions/checkout. The clone step below puts it there instead.
+  # Switch this to main once the fork branch is merged, and drop the whole
+  # arrangement once MODULE.bazel moves to git_override.
+  RULES_FLUTTER_REPO: https://github.com/pawelchcki/rules_flutter.git
+  RULES_FLUTTER_REF: flutter-path-deps-and-engine-patch
+
+jobs:
+  bazel:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out the rules_flutter fork
+        run: |
+          git clone --depth 1 --branch "$RULES_FLUTTER_REF" \
+            "$RULES_FLUTTER_REPO" "$GITHUB_WORKSPACE/../../rules_flutter/main"
+
+      - name: Install Bazelisk
+        run: |
+          curl -fsSLo "$RUNNER_TEMP/bazel" \
+            https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
+          chmod +x "$RUNNER_TEMP/bazel"
+          sudo mv "$RUNNER_TEMP/bazel" /usr/local/bin/bazel
+          bazel version
+
+      # user.bazelrc is gitignored and try-imported by .bazelrc. Without a key,
+      # remote cache and BES are switched off rather than left to fail against
+      # BuildBuddy anonymously — pull requests from forks get no secrets.
+      - name: Configure BuildBuddy
+        env:
+          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
+        run: |
+          if [ -n "$BUILDBUDDY_API_KEY" ]; then
+            echo "build --remote_header=x-buildbuddy-api-key=$BUILDBUDDY_API_KEY" > user.bazelrc
+            echo "BuildBuddy remote cache enabled"
+          else
+            {
+              echo "build --remote_cache="
+              echo "build --bes_backend="
+              echo "build --bes_results_url="
+            } > user.bazelrc
+            echo "No API key available; building without remote cache"
+          fi
+
+      - name: Build everything
+        run: bazel build //...
+
+      - name: Test everything
+        run: bazel test //...
+
+      # The Flutter analyze/format gates and the example widget test are the
+      # part Cargo cannot cover, so surface their logs when they fail.
+      - name: Show test logs on failure
+        if: failure()
+        run: |
+          find bazel-testlogs -name test.log -print -exec cat {} + || true
