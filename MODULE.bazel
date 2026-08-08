@@ -15,7 +15,9 @@ bazel_dep(name = "rules_flutter", version = "0.0.0")
 # checkout when developing the ruleset itself.
 git_override(
     module_name = "rules_flutter",
-    commit = "25343e4fc6d40a275aa6b8aeb96042515b9bfdd9",
+    commit = "87c95fdb78c1318e51ab6c091219c2b9167c1310",
+    patch_strip = 1,
+    patches = ["//third_party/rules_flutter:stage_path_dependencies.patch"],
     remote = "https://github.com/pawelchcki/rules_flutter.git",
 )
 
@@ -168,6 +170,10 @@ register_toolchains(
 # here. `bazel mod tidy` cannot fill this in: the pub extension does not
 # declare root_module_direct_deps.
 pub = use_extension("@rules_flutter//flutter:extensions.bzl", "pub")
+pub.deps_manifest(files = [
+    "//flutter_razemify:pub_deps.json",
+    "//flutter_razemify/example:pub_deps.json",
+])
 use_repo(
     pub,
     "pub_cupertino_icons",
