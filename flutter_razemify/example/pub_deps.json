@@ -13,7 +13,9 @@
         "image_picker",
         "integration_test",
         "flutter_test",
-        "flutter_lints"
+        "flutter_lints",
+        "flutter_plugin_android_lifecycle",
+        "image_picker_android"
       ],
       "directDependencies": [
         "flutter",
@@ -25,6 +27,266 @@
         "integration_test",
         "flutter_test",
         "flutter_lints"
+      ]
+    },
+    {
+      "name": "image_picker_android",
+      "version": "0.8.13",
+      "kind": "transitive",
+      "source": "hosted",
+      "dependencies": [
+        "flutter",
+        "flutter_plugin_android_lifecycle",
+        "image_picker_platform_interface"
+      ],
+      "directDependencies": [
+        "flutter",
+        "flutter_plugin_android_lifecycle",
+        "image_picker_platform_interface"
+      ]
+    },
+    {
+      "name": "image_picker_platform_interface",
+      "version": "2.11.1",
+      "kind": "transitive",
+      "source": "hosted",
+      "dependencies": [
+        "cross_file",
+        "flutter",
+        "http",
+        "plugin_platform_interface"
+      ],
+      "directDependencies": [
+        "cross_file",
+        "flutter",
+        "http",
+        "plugin_platform_interface"
+      ]
+    },
+    {
+      "name": "plugin_platform_interface",
+      "version": "2.1.8",
+      "kind": "transitive",
+      "source": "hosted",
+      "dependencies": [
+        "meta"
+      ],
+      "directDependencies": [
+        "meta"
+      ]
+    },
+    {
+      "name": "meta",
+      "version": "1.18.0",
+      "kind": "transitive",
+      "source": "hosted",
+      "dependencies": [],
+      "directDependencies": []
+    },
+    {
+      "name": "http",
+      "version": "1.6.0",
+      "kind": "transitive",
+      "source": "hosted",
+      "dependencies": [
+        "async",
+        "http_parser",
+        "meta",
+        "web"
+      ],
+      "directDependencies": [
+        "async",
+        "http_parser",
+        "meta",
+        "web"
+      ]
+    },
+    {
+      "name": "web",
+      "version": "1.1.1",
+      "kind": "transitive",
+      "source": "hosted",
+      "dependencies": [],
+      "directDependencies": []
+    },
+    {
+      "name": "http_parser",
+      "version": "4.1.2",
+      "kind": "transitive",
+      "source": "hosted",
+      "dependencies": [
+        "collection",
+        "source_span",
+        "string_scanner",
+        "typed_data"
+      ],
+      "directDependencies": [
+        "collection",
+        "source_span",
+        "string_scanner",
+        "typed_data"
+      ]
+    },
+    {
+      "name": "typed_data",
+      "version": "1.4.0",
+      "kind": "transitive",
+      "source": "hosted",
+      "dependencies": [
+        "collection"
+      ],
+      "directDependencies": [
+        "collection"
+      ]
+    },
+    {
+      "name": "collection",
+      "version": "1.19.1",
+      "kind": "transitive",
+      "source": "hosted",
+      "dependencies": [],
+      "directDependencies": []
+    },
+    {
+      "name": "string_scanner",
+      "version": "1.4.1",
+      "kind": "transitive",
+      "source": "hosted",
+      "dependencies": [
+        "source_span"
+      ],
+      "directDependencies": [
+        "source_span"
+      ]
+    },
+    {
+      "name": "source_span",
+      "version": "1.10.2",
+      "kind": "transitive",
+      "source": "hosted",
+      "dependencies": [
+        "collection",
+        "path",
+        "term_glyph"
+      ],
+      "directDependencies": [
+        "collection",
+        "path",
+        "term_glyph"
+      ]
+    },
+    {
+      "name": "term_glyph",
+      "version": "1.2.2",
+      "kind": "transitive",
+      "source": "hosted",
+      "dependencies": [],
+      "directDependencies": []
+    },
+    {
+      "name": "path",
+      "version": "1.9.1",
+      "kind": "transitive",
+      "source": "hosted",
+      "dependencies": [],
+      "directDependencies": []
+    },
+    {
+      "name": "async",
+      "version": "2.13.1",
+      "kind": "transitive",
+      "source": "hosted",
+      "dependencies": [
+        "collection",
+        "meta"
+      ],
+      "directDependencies": [
+        "collection",
+        "meta"
+      ]
+    },
+    {
+      "name": "flutter",
+      "version": "0.0.0",
+      "kind": "direct",
+      "source": "sdk",
+      "dependencies": [
+        "characters",
+        "collection",
+        "material_color_utilities",
+        "meta",
+        "vector_math",
+        "sky_engine"
+      ],
+      "directDependencies": [
+        "characters",
+        "collection",
+        "material_color_utilities",
+        "meta",
+        "vector_math",
+        "sky_engine"
+      ]
+    },
+    {
+      "name": "sky_engine",
+      "version": "0.0.0",
+      "kind": "transitive",
+      "source": "sdk",
+      "dependencies": [],
+      "directDependencies": []
+    },
+    {
+      "name": "vector_math",
+      "version": "2.2.0",
+      "kind": "transitive",
+      "source": "hosted",
+      "dependencies": [],
+      "directDependencies": []
+    },
+    {
+      "name": "material_color_utilities",
+      "version": "0.13.0",
+      "kind": "transitive",
+      "source": "hosted",
+      "dependencies": [
+        "collection"
+      ],
+      "directDependencies": [
+        "collection"
+      ]
+    },
+    {
+      "name": "characters",
+      "version": "1.4.1",
+      "kind": "transitive",
+      "source": "hosted",
+      "dependencies": [],
+      "directDependencies": []
+    },
+    {
+      "name": "cross_file",
+      "version": "0.3.5+4",
+      "kind": "transitive",
+      "source": "hosted",
+      "dependencies": [
+        "meta",
+        "web"
+      ],
+      "directDependencies": [
+        "meta",
+        "web"
+      ]
+    },
+    {
+      "name": "flutter_plugin_android_lifecycle",
+      "version": "2.0.29",
+      "kind": "transitive",
+      "source": "hosted",
+      "dependencies": [
+        "flutter"
+      ],
+      "directDependencies": [
+        "flutter"
       ]
     },
     {
@@ -94,36 +356,6 @@
       ]
     },
     {
-      "name": "async",
-      "version": "2.13.1",
-      "kind": "transitive",
-      "source": "hosted",
-      "dependencies": [
-        "collection",
-        "meta"
-      ],
-      "directDependencies": [
-        "collection",
-        "meta"
-      ]
-    },
-    {
-      "name": "meta",
-      "version": "1.18.0",
-      "kind": "transitive",
-      "source": "hosted",
-      "dependencies": [],
-      "directDependencies": []
-    },
-    {
-      "name": "collection",
-      "version": "1.19.1",
-      "kind": "transitive",
-      "source": "hosted",
-      "dependencies": [],
-      "directDependencies": []
-    },
-    {
       "name": "leak_tracker_flutter_testing",
       "version": "3.0.10",
       "kind": "transitive",
@@ -190,50 +422,6 @@
         "string_scanner",
         "term_glyph"
       ]
-    },
-    {
-      "name": "term_glyph",
-      "version": "1.2.2",
-      "kind": "transitive",
-      "source": "hosted",
-      "dependencies": [],
-      "directDependencies": []
-    },
-    {
-      "name": "string_scanner",
-      "version": "1.4.1",
-      "kind": "transitive",
-      "source": "hosted",
-      "dependencies": [
-        "source_span"
-      ],
-      "directDependencies": [
-        "source_span"
-      ]
-    },
-    {
-      "name": "source_span",
-      "version": "1.10.2",
-      "kind": "transitive",
-      "source": "hosted",
-      "dependencies": [
-        "collection",
-        "path",
-        "term_glyph"
-      ],
-      "directDependencies": [
-        "collection",
-        "path",
-        "term_glyph"
-      ]
-    },
-    {
-      "name": "path",
-      "version": "1.9.1",
-      "kind": "transitive",
-      "source": "hosted",
-      "dependencies": [],
-      "directDependencies": []
     },
     {
       "name": "stack_trace",
@@ -308,64 +496,6 @@
     {
       "name": "clock",
       "version": "1.1.2",
-      "kind": "transitive",
-      "source": "hosted",
-      "dependencies": [],
-      "directDependencies": []
-    },
-    {
-      "name": "flutter",
-      "version": "0.0.0",
-      "kind": "direct",
-      "source": "sdk",
-      "dependencies": [
-        "characters",
-        "collection",
-        "material_color_utilities",
-        "meta",
-        "vector_math",
-        "sky_engine"
-      ],
-      "directDependencies": [
-        "characters",
-        "collection",
-        "material_color_utilities",
-        "meta",
-        "vector_math",
-        "sky_engine"
-      ]
-    },
-    {
-      "name": "sky_engine",
-      "version": "0.0.0",
-      "kind": "transitive",
-      "source": "sdk",
-      "dependencies": [],
-      "directDependencies": []
-    },
-    {
-      "name": "vector_math",
-      "version": "2.2.0",
-      "kind": "transitive",
-      "source": "hosted",
-      "dependencies": [],
-      "directDependencies": []
-    },
-    {
-      "name": "material_color_utilities",
-      "version": "0.13.0",
-      "kind": "transitive",
-      "source": "hosted",
-      "dependencies": [
-        "collection"
-      ],
-      "directDependencies": [
-        "collection"
-      ]
-    },
-    {
-      "name": "characters",
-      "version": "1.4.1",
       "kind": "transitive",
       "source": "hosted",
       "dependencies": [],
@@ -515,7 +645,7 @@
     },
     {
       "name": "image_picker",
-      "version": "1.2.3",
+      "version": "1.1.2",
       "kind": "direct",
       "source": "hosted",
       "dependencies": [
@@ -555,106 +685,6 @@
         "file_selector_windows",
         "flutter",
         "image_picker_platform_interface"
-      ]
-    },
-    {
-      "name": "image_picker_platform_interface",
-      "version": "2.11.1",
-      "kind": "transitive",
-      "source": "hosted",
-      "dependencies": [
-        "cross_file",
-        "flutter",
-        "http",
-        "plugin_platform_interface"
-      ],
-      "directDependencies": [
-        "cross_file",
-        "flutter",
-        "http",
-        "plugin_platform_interface"
-      ]
-    },
-    {
-      "name": "plugin_platform_interface",
-      "version": "2.1.8",
-      "kind": "transitive",
-      "source": "hosted",
-      "dependencies": [
-        "meta"
-      ],
-      "directDependencies": [
-        "meta"
-      ]
-    },
-    {
-      "name": "http",
-      "version": "1.6.0",
-      "kind": "transitive",
-      "source": "hosted",
-      "dependencies": [
-        "async",
-        "http_parser",
-        "meta",
-        "web"
-      ],
-      "directDependencies": [
-        "async",
-        "http_parser",
-        "meta",
-        "web"
-      ]
-    },
-    {
-      "name": "web",
-      "version": "1.1.1",
-      "kind": "transitive",
-      "source": "hosted",
-      "dependencies": [],
-      "directDependencies": []
-    },
-    {
-      "name": "http_parser",
-      "version": "4.1.2",
-      "kind": "transitive",
-      "source": "hosted",
-      "dependencies": [
-        "collection",
-        "source_span",
-        "string_scanner",
-        "typed_data"
-      ],
-      "directDependencies": [
-        "collection",
-        "source_span",
-        "string_scanner",
-        "typed_data"
-      ]
-    },
-    {
-      "name": "typed_data",
-      "version": "1.4.0",
-      "kind": "transitive",
-      "source": "hosted",
-      "dependencies": [
-        "collection"
-      ],
-      "directDependencies": [
-        "collection"
-      ]
-    },
-    {
-      "name": "cross_file",
-      "version": "0.3.5+4",
-      "kind": "transitive",
-      "source": "hosted",
-      "dependencies": [
-        "meta",
-        "web"
-      ],
-      "directDependencies": [
-        "meta",
-        "web"
       ]
     },
     {
@@ -806,36 +836,6 @@
       "version": "0.0.0",
       "kind": "transitive",
       "source": "sdk",
-      "dependencies": [
-        "flutter"
-      ],
-      "directDependencies": [
-        "flutter"
-      ]
-    },
-    {
-      "name": "image_picker_android",
-      "version": "0.8.13+19",
-      "kind": "transitive",
-      "source": "hosted",
-      "dependencies": [
-        "flutter",
-        "flutter_plugin_android_lifecycle",
-        "image_picker_platform_interface",
-        "meta"
-      ],
-      "directDependencies": [
-        "flutter",
-        "flutter_plugin_android_lifecycle",
-        "image_picker_platform_interface",
-        "meta"
-      ]
-    },
-    {
-      "name": "flutter_plugin_android_lifecycle",
-      "version": "2.0.35",
-      "kind": "transitive",
-      "source": "hosted",
       "dependencies": [
         "flutter"
       ],

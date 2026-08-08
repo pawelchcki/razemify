@@ -1,7 +1,5 @@
-load("@rules_flutter//flutter:defs.bzl", "flutter_library", "flutter_test")
+load("@rules_flutter//flutter:defs.bzl", "flutter_app", "flutter_library", "flutter_test")
 
-# No flutter_app target: the APK is still built through Gradle, which also
-# supplies the Android .so via the cargo shim.
 flutter_library(
     name = "lib",
     srcs = glob(["lib/**"]),
@@ -18,6 +16,68 @@ flutter_library(
         "@pub_flutter_lints//:flutter_lints",
         "@pub_image_picker//:image_picker",
     ],
+)
+
+flutter_library(
+    name = "lib_android_debug",
+    srcs = glob(["lib/**"]),
+    pubspec = "pubspec.yaml",
+    deps = [
+        "//flutter_razemify:flutter_razemify_android_debug",
+        "@flutter_sdk//flutter/packages/flutter",
+        "@flutter_sdk//flutter/packages/flutter_test",
+        "@flutter_sdk//flutter/packages/integration_test",
+        "@pub_cupertino_icons//:cupertino_icons",
+        "@pub_flutter_lints//:flutter_lints",
+        "@pub_image_picker//:image_picker",
+    ],
+)
+
+flutter_library(
+    name = "lib_android_release",
+    srcs = glob(["lib/**"]),
+    pubspec = "pubspec.yaml",
+    deps = [
+        "//flutter_razemify:flutter_razemify_android_release",
+        "@flutter_sdk//flutter/packages/flutter",
+        "@flutter_sdk//flutter/packages/flutter_test",
+        "@flutter_sdk//flutter/packages/integration_test",
+        "@pub_cupertino_icons//:cupertino_icons",
+        "@pub_flutter_lints//:flutter_lints",
+        "@pub_image_picker//:image_picker",
+    ],
+)
+
+filegroup(
+    name = "android_files",
+    srcs = glob(
+        ["android/**"],
+        exclude = [
+            "android/**/build/**",
+            "android/.gradle/**",
+            "android/local.properties",
+        ],
+    ),
+)
+
+flutter_app(
+    name = "example",
+    apk = {
+        "android_maven_repo": "@android_maven//:mirror",
+        "mode": "debug",
+        "srcs": [":android_files"],
+    },
+    embed = [":lib_android_debug"],
+)
+
+flutter_app(
+    name = "example_bundle",
+    appbundle = {
+        "android_maven_repo": "@android_maven//:mirror",
+        "mode": "release",
+        "srcs": [":android_files"],
+    },
+    embed = [":lib_android_release"],
 )
 
 # integration_test/ is not Bazelified: it needs a real device or emulator.

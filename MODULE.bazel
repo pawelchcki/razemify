@@ -15,8 +15,17 @@ bazel_dep(name = "rules_flutter", version = "0.0.0")
 # checkout when developing the ruleset itself.
 git_override(
     module_name = "rules_flutter",
-    commit = "c622473384142e9f78d7941e495237a88e2c2b9a",
+    commit = "25343e4fc6d40a275aa6b8aeb96042515b9bfdd9",
     remote = "https://github.com/pawelchcki/rules_flutter.git",
+)
+
+archive_override(
+    module_name = "hermetic_android_toolchains",
+    integrity = "sha256-jovdpav966xUgaGTHIv5OMGtWxJMFk8ijbSoGQ6xX2E=",
+    patch_strip = 1,
+    patches = ["//third_party/hermetic_android_toolchains:export_repositories.patch"],
+    strip_prefix = "hermetic_android_toolchains-c6a9f203fbe1d4e72ecfc8d6ea47b81c844435ff",
+    urls = ["https://github.com/keith/hermetic_android_toolchains/archive/c6a9f203fbe1d4e72ecfc8d6ea47b81c844435ff.tar.gz"],
 )
 
 toolchains = use_extension("@rules_rs//rs/toolchains:module_extension.bzl", "toolchains")
@@ -96,6 +105,12 @@ register_toolchains(
 )
 
 http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+maven_repository = use_repo_rule("//third_party/android_maven:maven_repository.bzl", "maven_repository")
+
+maven_repository(
+    name = "android_maven",
+    manifest = "//third_party/android_maven:maven_manifest.json",
+)
 
 # ONNX Runtime version must match what the resolved ort-sys crate pins
 # (build/download/dist.tsv in the ort-sys sources): ort-sys 2.0.0-rc.13 -> 1.28.0.
@@ -125,9 +140,27 @@ http_archive(
 
 flutter = use_extension("@rules_flutter//flutter:extensions.bzl", "flutter")
 flutter.toolchain(flutter_version = "3.44.7")
-use_repo(flutter, "flutter_sdk", "flutter_toolchains")
+flutter.android_toolchain(
+    name = "android",
+    build_tools_version = "36.0.0",
+    gradle_distribution_integrity = "sha256-1yXXB7+r1N/clYxiQAOzyArMwD9wN7USLEsdDvFc7Ks=",
+    gradle_distribution_url = "https://services.gradle.org/distributions/gradle-8.9-bin.zip",
+    ndk_version = "28.2.13676358",
+    sdk_version = "36",
+)
+use_repo(
+    flutter,
+    "android_android_ndk",
+    "android_toolchains",
+    "flutter_sdk",
+    "flutter_toolchains",
+)
 
-register_toolchains("@flutter_toolchains//:all")
+register_toolchains(
+    "@android_android_ndk//:all",
+    "@android_toolchains//:all",
+    "@flutter_toolchains//:all",
+)
 
 # Repos come from the checked-in pub_deps.json files; regenerate those with
 # `bazel run //flutter_razemify:flutter_razemify.update` (and the example's

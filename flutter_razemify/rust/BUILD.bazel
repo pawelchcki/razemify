@@ -4,14 +4,23 @@ load("@rules_rs//rs:rust_static_library.bzl", "rust_static_library")
 # Host-platform builds of the plugin's native library. The Android .so is
 # still produced by the Gradle cargo shim (needs an NDK cc toolchain in
 # Bazel — follow-up).
-rust_shared_library(
-    name = "flutter_razemify_shared",
-    srcs = glob(["src/**/*.rs"]),
-    crate_name = "flutter_razemify",
-    edition = "2021",
-    visibility = ["//visibility:public"],
-    deps = ["//razemify-core:razemify_core_flutter"],
-)
+[
+    rust_shared_library(
+        name = "flutter_razemify_{}".format(abi),
+        srcs = glob(["src/**/*.rs"]),
+        crate_name = "flutter_razemify",
+        edition = "2021",
+        platform = "//platforms:android_{}".format(platform),
+        visibility = ["//visibility:public"],
+        deps = ["//razemify-core:razemify_core_flutter"],
+    )
+    for abi, platform in {
+        "arm64_v8a": "arm64_v8a",
+        "armeabi_v7a": "armeabi_v7a",
+        "x86": "x86",
+        "x86_64": "x86_64",
+    }.items()
+]
 
 rust_static_library(
     name = "flutter_razemify_static",

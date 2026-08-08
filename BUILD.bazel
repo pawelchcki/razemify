@@ -12,7 +12,6 @@ exports_files(
 # Equivalent to `cargo clippy --workspace -- -D warnings` and
 # `cargo fmt --all --check`; see .bazelrc for the deny-warnings flag.
 _RUST_TARGETS = [
-    "//flutter_razemify/rust:flutter_razemify_shared",
     "//flutter_razemify/rust:flutter_razemify_static",
     "//razemify-cli",
     "//razemify-core:razemify_core",

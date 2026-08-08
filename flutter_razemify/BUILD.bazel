@@ -15,6 +15,47 @@ flutter_library(
     ],
 )
 
+flutter_library(
+    name = "flutter_razemify_android_debug",
+    srcs = glob([
+        "android/**",
+        "lib/**",
+    ]),
+    generated_srcs = {
+        "//flutter_razemify/rust:flutter_razemify_arm64_v8a": "android/src/main/jniLibs/arm64-v8a",
+    },
+    pubspec = "pubspec.yaml",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@flutter_sdk//flutter/packages/flutter",
+        "@pub_ffi//:ffi",
+        "@pub_flutter_lints//:flutter_lints",
+        "@pub_image//:image",
+    ],
+)
+
+flutter_library(
+    name = "flutter_razemify_android_release",
+    srcs = glob([
+        "android/**",
+        "lib/**",
+    ]),
+    generated_srcs = {
+        "//flutter_razemify/rust:flutter_razemify_arm64_v8a": "android/src/main/jniLibs/arm64-v8a",
+        "//flutter_razemify/rust:flutter_razemify_armeabi_v7a": "android/src/main/jniLibs/armeabi-v7a",
+        "//flutter_razemify/rust:flutter_razemify_x86": "android/src/main/jniLibs/x86",
+        "//flutter_razemify/rust:flutter_razemify_x86_64": "android/src/main/jniLibs/x86_64",
+    },
+    pubspec = "pubspec.yaml",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@flutter_sdk//flutter/packages/flutter",
+        "@pub_ffi//:ffi",
+        "@pub_flutter_lints//:flutter_lints",
+        "@pub_image//:image",
+    ],
+)
+
 flutter_analyze_test(
     name = "analyze",
     srcs = ["analysis_options.yaml"],
