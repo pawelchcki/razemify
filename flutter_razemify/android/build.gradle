@@ -132,15 +132,23 @@ def createRustBuildTask(String taskName, String rustTarget, String androidAbi) {
         def apiLevel = android.defaultConfig.minSdk
         def hostArch = project.ext.hostArchForNdk
 
-        def linker = "${ndkDir}/toolchains/llvm/prebuilt/${hostArch}/bin/${rustTarget}${apiLevel}-clang"
+        // The NDK names its clang wrappers after the *NDK* triple, which differs
+        // from the Rust triple for 32-bit ARM and nowhere else: Rust says
+        // armv7-linux-androideabi, the NDK ships armv7a-linux-androideabi21-clang.
+        // Using the Rust triple here made buildRustArmv7 fail at configuration
+        // time against every NDK, so any all-ABI build (i.e. every release APK
+        // and app bundle) died before it started.
+        def ndkTarget = rustTarget == 'armv7-linux-androideabi' ? 'armv7a-linux-androideabi' : rustTarget
+
+        def linker = "${ndkDir}/toolchains/llvm/prebuilt/${hostArch}/bin/${ndkTarget}${apiLevel}-clang"
         if (!file(linker).exists()) {
-            linker = "${ndkDir}/toolchains/llvm/prebuilt/${hostArch}/bin/${rustTarget}-clang"
+            linker = "${ndkDir}/toolchains/llvm/prebuilt/${hostArch}/bin/${ndkTarget}-clang"
             if (!file(linker).exists()) {
                 throw new GradleException(
                     "Android NDK linker not found for target ${rustTarget}!\n" +
                     "Expected one of:\n" +
-                    "  - ${ndkDir}/toolchains/llvm/prebuilt/${hostArch}/bin/${rustTarget}${apiLevel}-clang\n" +
-                    "  - ${ndkDir}/toolchains/llvm/prebuilt/${hostArch}/bin/${rustTarget}-clang\n\n" +
+                    "  - ${ndkDir}/toolchains/llvm/prebuilt/${hostArch}/bin/${ndkTarget}${apiLevel}-clang\n" +
+                    "  - ${ndkDir}/toolchains/llvm/prebuilt/${hostArch}/bin/${ndkTarget}-clang\n\n" +
                     "Possible solutions:\n" +
                     "1. Install Android NDK via Android Studio SDK Manager\n" +
                     "2. Set ANDROID_NDK_HOME environment variable\n" +
