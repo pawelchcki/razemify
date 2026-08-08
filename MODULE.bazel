@@ -7,9 +7,16 @@ bazel_dep(name = "rules_rs", version = "0.0.102")
 bazel_dep(name = "llvm", version = "0.8.16")
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_flutter", version = "0.0.0")
-local_path_override(
+
+# Fetched from the fork rather than a registry: it carries the arm64
+# toolchains, SDK-repo caching, and remote-exec tagging this build needs.
+# Pinned to a commit so the build is reproducible; to move it, bump the
+# commit and re-run the build. Swap in local_path_override pointing at a
+# checkout when developing the ruleset itself.
+git_override(
     module_name = "rules_flutter",
-    path = "../../rules_flutter/main",
+    commit = "c622473384142e9f78d7941e495237a88e2c2b9a",
+    remote = "https://github.com/pawelchcki/rules_flutter.git",
 )
 
 toolchains = use_extension("@rules_rs//rs/toolchains:module_extension.bzl", "toolchains")

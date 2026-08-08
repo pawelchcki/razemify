@@ -6,26 +6,12 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  # MODULE.bazel consumes the rules_flutter fork through local_path_override at
-  # ../../rules_flutter/main, which sits outside $GITHUB_WORKSPACE and so cannot
-  # be placed by actions/checkout. The clone step below puts it there instead.
-  # Switch this to main once the fork branch is merged, and drop the whole
-  # arrangement once MODULE.bazel moves to git_override.
-  RULES_FLUTTER_REPO: https://github.com/pawelchcki/rules_flutter.git
-  RULES_FLUTTER_REF: flutter-path-deps-and-engine-patch
-
 jobs:
   bazel:
     name: Build and Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Check out the rules_flutter fork
-        run: |
-          git clone --depth 1 --branch "$RULES_FLUTTER_REF" \
-            "$RULES_FLUTTER_REPO" "$GITHUB_WORKSPACE/../../rules_flutter/main"
 
       - name: Install Bazelisk
         run: |
