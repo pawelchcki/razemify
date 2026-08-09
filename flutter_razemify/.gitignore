@@ -24,8 +24,8 @@ migrate_working_dir/
 #.vscode/
 
 # Flutter/Dart/Pub related
-# Libraries should not include pubspec.lock, per https://dart.dev/guides/libraries/private-files#pubspeclock.
-/pubspec.lock
+# rules_flutter consumes this lock as a declared Bazel module-extension input.
+# Keep it checked in even though this package is also published as a library.
 **/doc/api/
 .dart_tool/
 .flutter-plugins

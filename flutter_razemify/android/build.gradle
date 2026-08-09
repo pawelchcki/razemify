@@ -30,6 +30,11 @@ ext.isReleaseBuild = gradle.startParameter.taskNames.any {
     it.contains("Release") || it.contains("Profile")
 }
 
+// rules_flutter stages Bazel-built libraries into jniLibs. Conventional
+// Flutter/Gradle builds still need to compile them from the Rust workspace.
+ext.rustLibrariesProvidedByBazel = System.getenv("RULES_FLUTTER_MAVEN_MIRROR") != null
+ext.rustProjectDir = file("${projectDir}/../rust")
+
 android {
     namespace = "com.example.flutter_razemify"
 
@@ -89,3 +94,67 @@ android {
         }
     }
 }
+
+def hostOs = System.getProperty("os.name").toLowerCase()
+def hostCpu = System.getProperty("os.arch").toLowerCase()
+def ndkHost = "linux-x86_64"
+if (hostOs.contains("mac")) {
+    ndkHost = (hostCpu == "aarch64" || hostCpu == "arm64") ? "darwin-aarch64" : "darwin-x86_64"
+} else if (hostOs.contains("linux") && (hostCpu == "aarch64" || hostCpu == "arm64")) {
+    ndkHost = "linux-aarch64"
+} else if (hostOs.contains("windows")) {
+    ndkHost = "windows-x86_64"
+}
+
+def rustTargets = [
+    [task: "buildRustArm64", triple: "aarch64-linux-android", abi: "arm64-v8a", releaseOnly: false],
+    [task: "buildRustArmv7", triple: "armv7-linux-androideabi", abi: "armeabi-v7a", releaseOnly: true],
+    [task: "buildRustX86", triple: "i686-linux-android", abi: "x86", releaseOnly: true],
+    [task: "buildRustX86_64", triple: "x86_64-linux-android", abi: "x86_64", releaseOnly: true],
+]
+
+def rustBuildTasks = rustTargets.collect { target ->
+    tasks.register(target.task, Exec) {
+        onlyIf {
+            !project.ext.rustLibrariesProvidedByBazel &&
+                (!target.releaseOnly || project.ext.isReleaseBuild)
+        }
+
+        doFirst {
+            def ndkDir = android.ndkDirectory
+            def toolchainBin = file("${ndkDir}/toolchains/llvm/prebuilt/${ndkHost}/bin")
+            def linker = file("${toolchainBin}/${target.triple}${android.defaultConfig.minSdk}-clang")
+            if (!linker.exists()) {
+                throw new GradleException("Android NDK linker not found: ${linker}")
+            }
+
+            def envPrefix = target.triple.toUpperCase().replace('-', '_')
+            workingDir project.ext.rustProjectDir
+            environment "CARGO_TARGET_${envPrefix}_LINKER", linker.absolutePath
+            environment "CC_${envPrefix}", linker.absolutePath
+            environment "AR_${envPrefix}", file("${toolchainBin}/llvm-ar").absolutePath
+            commandLine "cargo", "build", "--target", target.triple
+            if (project.ext.isReleaseBuild) {
+                args "--release"
+            }
+        }
+
+        doLast {
+            def profile = project.ext.isReleaseBuild ? "release" : "debug"
+            def rustLib = file("${projectDir}/../../target/${target.triple}/${profile}/libflutter_razemify.so")
+            if (!rustLib.exists() || rustLib.length() < 1024) {
+                throw new GradleException("Rust build did not produce a valid library: ${rustLib}")
+            }
+            copy {
+                from rustLib
+                into file("${projectDir}/src/main/jniLibs/${target.abi}")
+            }
+        }
+    }
+}
+
+tasks.register("buildRust") {
+    dependsOn rustBuildTasks
+}
+
+preBuild.dependsOn tasks.named("buildRust")

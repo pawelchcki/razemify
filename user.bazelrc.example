@@ -3,4 +3,5 @@
 #
 # Alternatively, set the key once for every workspace on the machine by putting
 # this same line in ~/.bazelrc (chmod 600 — it is a credential).
+build --config=buildbuddy
 build --remote_header=x-buildbuddy-api-key=YOUR_KEY_HERE

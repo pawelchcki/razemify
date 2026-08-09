@@ -49,6 +49,7 @@ rust_library(
 rust_test(
     name = "razemify_core_test",
     crate = ":razemify_core",
+    visibility = ["//:__pkg__"],
 )
 
 # The same unit tests against the feature-enabled build, which is what
@@ -56,4 +57,5 @@ rust_test(
 rust_test(
     name = "razemify_core_rembg_test",
     crate = ":razemify_core_rembg",
+    visibility = ["//:__pkg__"],
 )

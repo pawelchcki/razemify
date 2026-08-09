@@ -42,6 +42,7 @@ jobs:
         run: |
           echo "common --repository_cache=$HOME/.cache/bazel-repo" > user.bazelrc
           if [ -n "$BUILDBUDDY_API_KEY" ]; then
+            echo "build --config=buildbuddy" >> user.bazelrc
             echo "build --remote_header=x-buildbuddy-api-key=$BUILDBUDDY_API_KEY" >> user.bazelrc
             echo "BuildBuddy remote cache enabled"
           else
@@ -66,6 +67,16 @@ jobs:
       # matching `cargo clippy -- -D warnings`.
       - name: Clippy
         run: bazel build //:clippy
+
+      # xtask's deployment path invokes wasm-pack directly; keep that release
+      # packaging and wasm-opt configuration covered in addition to Bazel's
+      # wasm-bindgen target.
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --version 0.15.0 --locked
+
+      - name: Build WASM release package
+        run: wasm-pack build --target web --release
+        working-directory: razemify-wasm
 
       # The Flutter analyze/format gates and the example widget test are the
       # part Cargo cannot cover, so surface their logs when they fail.

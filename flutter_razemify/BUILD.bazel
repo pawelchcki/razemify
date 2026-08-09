@@ -1,5 +1,20 @@
 load("@rules_flutter//flutter:defs.bzl", "dart_format_test", "flutter_analyze_test", "flutter_library")
 
+_ANDROID_SRCS = glob(
+    [
+        "android/**",
+        "lib/**",
+    ],
+    exclude = [
+        "android/**/.cxx/**",
+        "android/**/build/**",
+        "android/**/jniLibs/**",
+        "android/.gradle/**",
+        "android/captures/**",
+        "android/local.properties",
+    ],
+)
+
 flutter_library(
     name = "flutter_razemify",
     srcs = glob(["lib/**"]),
@@ -13,10 +28,7 @@ flutter_library(
 
 flutter_library(
     name = "flutter_razemify_android_debug",
-    srcs = glob([
-        "android/**",
-        "lib/**",
-    ]),
+    srcs = _ANDROID_SRCS,
     generated_srcs = {
         "//flutter_razemify/rust:flutter_razemify_arm64_v8a": "android/src/main/jniLibs/arm64-v8a",
     },
@@ -30,10 +42,7 @@ flutter_library(
 
 flutter_library(
     name = "flutter_razemify_android_release",
-    srcs = glob([
-        "android/**",
-        "lib/**",
-    ]),
+    srcs = _ANDROID_SRCS,
     generated_srcs = {
         "//flutter_razemify/rust:flutter_razemify_arm64_v8a": "android/src/main/jniLibs/arm64-v8a",
         "//flutter_razemify/rust:flutter_razemify_armeabi_v7a": "android/src/main/jniLibs/armeabi-v7a",

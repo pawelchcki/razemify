@@ -21,10 +21,15 @@ _RUST_TARGETS = [
     "//xtask",
 ]
 
+_RUST_CLIPPY_TARGETS = _RUST_TARGETS + [
+    "//razemify-core:razemify_core_rembg_test",
+    "//razemify-core:razemify_core_test",
+]
+
 rust_clippy(
     name = "clippy",
     testonly = True,
-    deps = _RUST_TARGETS,
+    deps = _RUST_CLIPPY_TARGETS,
 )
 
 rustfmt_test(
