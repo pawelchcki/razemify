@@ -9,8 +9,5 @@ crate-type = ["cdylib", "staticlib"]
 [dependencies]
 razemify-core = { path = "../../razemify-core", default-features = false, features = ["flutter_ffi"] }
 
-[profile.release]
-opt-level = "z"
-lto = true
-codegen-units = 1
-strip = true
+# Release profile lives in the workspace root Cargo.toml; cargo ignores
+# profiles declared by non-root members.
