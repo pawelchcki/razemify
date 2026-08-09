@@ -120,6 +120,7 @@ def rustBuildTasks = rustTargets.collect { target ->
         // Declare inputs and outputs so Gradle can skip unchanged Rust builds.
         inputs.dir("${projectDir}/../rust")
         inputs.dir("${projectDir}/../../razemify-core/src")
+        inputs.file("${projectDir}/../../razemify-core/Cargo.toml")
         inputs.file("${projectDir}/../../Cargo.toml")
         inputs.file("${projectDir}/../../Cargo.lock")
         inputs.property("profile", profile)
