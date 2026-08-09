@@ -1,0 +1,6 @@
+exports_files([
+    "README.md",
+    "defs.bzl",
+    "flutter_extensions.bzl",
+    "repositories.bzl",
+])

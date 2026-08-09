@@ -1,33 +1,31 @@
 module(
     name = "razemify",
     version = "0.1.0",
+    bazel_compatibility = [">=9.2.0"],
 )
 
 bazel_dep(name = "rules_rs", version = "0.0.102")
 bazel_dep(name = "llvm", version = "0.8.16")
 bazel_dep(name = "platforms", version = "1.1.0")
-bazel_dep(name = "rules_flutter", version = "0.0.0")
 
-# Fetched from the fork rather than a registry: it carries the arm64
-# toolchains, SDK-repo caching, and remote-exec tagging this build needs.
-# Pinned to a commit so the build is reproducible; to move it, bump the
-# commit and re-run the build. Swap in local_path_override pointing at a
-# checkout when developing the ruleset itself.
-git_override(
-    module_name = "rules_flutter",
-    commit = "21c8082509bd3d377276c74153139fe6aafae756",
-    patch_strip = 1,
-    patches = ["//third_party/rules_flutter:stage_path_dependencies.patch"],
-    remote = "https://github.com/pawelchcki/rules_flutter.git",
-)
+# These are the public dependencies of the pinned rules_flutter fork. The fork
+# itself and its patched Android SDK provider are fetched by our extension so
+# their source selection remains effective when Razemify is not the root
+# module (Bzlmod deliberately ignores overrides declared by dependencies).
+bazel_dep(name = "apple_support", version = "1.24.2")
+bazel_dep(name = "bazel_skylib", version = "1.9.0")
+bazel_dep(name = "protobuf", version = "34.0.bcr.1")
+bazel_dep(name = "rules_android", version = "0.7.3")
+bazel_dep(name = "rules_android_ndk", version = "0.1.5")
+bazel_dep(name = "rules_cc", version = "0.2.22")
+bazel_dep(name = "rules_java", version = "9.3.0")
+bazel_dep(name = "rules_shell", version = "0.6.1")
 
-archive_override(
-    module_name = "hermetic_android_toolchains",
-    integrity = "sha256-jovdpav966xUgaGTHIv5OMGtWxJMFk8ijbSoGQ6xX2E=",
-    patch_strip = 1,
-    patches = ["//third_party/hermetic_android_toolchains:export_repositories.patch"],
-    strip_prefix = "hermetic_android_toolchains-c6a9f203fbe1d4e72ecfc8d6ea47b81c844435ff",
-    urls = ["https://github.com/keith/hermetic_android_toolchains/archive/c6a9f203fbe1d4e72ecfc8d6ea47b81c844435ff.tar.gz"],
+razemify_dependencies = use_extension("//bazel:repositories.bzl", "razemify_dependencies")
+use_repo(
+    razemify_dependencies,
+    "hermetic_android_toolchains",
+    "rules_flutter",
 )
 
 toolchains = use_extension("@rules_rs//rs/toolchains:module_extension.bzl", "toolchains")
@@ -141,9 +139,17 @@ http_archive(
     url = "https://github.com/microsoft/onnxruntime/releases/download/v1.28.0/onnxruntime-osx-arm64-1.28.0.tgz",
 )
 
-flutter = use_extension("@rules_flutter//flutter:extensions.bzl", "flutter")
+# Re-exporting the extension from Razemify gives consumers the same extension
+# identity and therefore the same Flutter providers, SDK, and pub repositories.
+flutter = use_extension("//bazel:flutter_extensions.bzl", "flutter")
 flutter.toolchain(flutter_version = "3.44.7")
-flutter.android_toolchain(
+
+flutter_dev = use_extension(
+    "//bazel:flutter_extensions.bzl",
+    "flutter",
+    dev_dependency = True,
+)
+flutter_dev.android_toolchain(
     name = "android",
     build_tools_version = "36.0.0",
     gradle_distribution_integrity = "sha256-1yXXB7+r1N/clYxiQAOzyArMwD9wN7USLEsdDvFc7Ks=",
@@ -152,26 +158,66 @@ flutter.android_toolchain(
     sdk_version = "36",
 )
 use_repo(
-    flutter,
+    flutter_dev,
     "android_android_ndk",
     "android_toolchains",
+)
+
+use_repo(
+    flutter,
     "flutter_sdk",
     "flutter_toolchains",
 )
 
 register_toolchains(
-    "@android_android_ndk//:all",
-    "@android_toolchains//:all",
     "@flutter_toolchains//:all",
 )
 
-pub = use_extension("@rules_flutter//flutter:extensions.bzl", "pub")
+register_toolchains(
+    "@android_android_ndk//:all",
+    "@android_toolchains//:all",
+    dev_dependency = True,
+)
+
+pub = use_extension("//bazel:flutter_extensions.bzl", "pub")
 pub.lock(
     name = "flutter_razemify_deps",
     file = "//flutter_razemify:pubspec.lock",
 )
-pub.lock(
+pub.package(
+    name = "pub_fixnum",
+    package = "fixnum",
+    version = "1.1.1",
+)
+pub.package(
+    name = "pub_meta",
+    package = "meta",
+    version = "1.15.0",
+)
+pub.package(
+    name = "pub_path",
+    package = "path",
+    version = "1.9.0",
+)
+pub.package(
+    name = "pub_protobuf",
+    package = "protobuf",
+    version = "3.1.0",
+)
+pub.package(
+    name = "pub_protoc_plugin",
+    package = "protoc_plugin",
+    version = "21.1.1",
+)
+use_repo(pub, "flutter_razemify_deps", "pub_fixnum", "pub_meta", "pub_path", "pub_protobuf", "pub_protoc_plugin")
+
+pub_dev = use_extension(
+    "//bazel:flutter_extensions.bzl",
+    "pub",
+    dev_dependency = True,
+)
+pub_dev.lock(
     name = "flutter_razemify_example_deps",
     file = "//flutter_razemify/example:pubspec.lock",
 )
-use_repo(pub, "flutter_razemify_deps", "flutter_razemify_example_deps", "pub_fixnum", "pub_meta", "pub_path", "pub_protobuf", "pub_protoc_plugin")
+use_repo(pub_dev, "flutter_razemify_example_deps")

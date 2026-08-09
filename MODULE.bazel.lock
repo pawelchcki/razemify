@@ -20,7 +20,6 @@
     "https://bcr.bazel.build/modules/apple_support/1.15.1/MODULE.bazel": "a0556fefca0b1bb2de8567b8827518f94db6a6e7e7d632b4c48dc5f865bc7c85",
     "https://bcr.bazel.build/modules/apple_support/1.21.0/MODULE.bazel": "ac1824ed5edf17dee2fdd4927ada30c9f8c3b520be1b5fd02a5da15bc10bff3e",
     "https://bcr.bazel.build/modules/apple_support/1.21.1/MODULE.bazel": "5809fa3efab15d1f3c3c635af6974044bac8a4919c62238cce06acee8a8c11f1",
-    "https://bcr.bazel.build/modules/apple_support/1.23.1/MODULE.bazel": "53763fed456a968cf919b3240427cf3a9d5481ec5466abc9d5dc51bc70087442",
     "https://bcr.bazel.build/modules/apple_support/1.24.1/MODULE.bazel": "f46e8ddad60aef170ee92b2f3d00ef66c147ceafea68b6877cb45bd91737f5f8",
     "https://bcr.bazel.build/modules/apple_support/1.24.2/MODULE.bazel": "0e62471818affb9f0b26f128831d5c40b074d32e6dda5a0d3852847215a41ca4",
     "https://bcr.bazel.build/modules/apple_support/1.24.2/source.json": "2c22c9827093250406c5568da6c54e6fdf0ef06238def3d99c71b12feb057a8d",
@@ -278,32 +277,20 @@
   },
   "selectedYankedVersions": {},
   "moduleExtensions": {
-    "@@rules_android+//rules/android_sdk_repository:rule.bzl%android_sdk_repository_extension": {
+    "//bazel:flutter_extensions.bzl%flutter": {
       "general": {
-        "bzlTransitiveDigest": "qHbR00gVzVzkxX+PRtv4UGcUFMtBz7TK9CNYUWH8nIE=",
-        "usagesDigest": "x1HLqlqAwv0KTxojlsMXLqzK2rEGmh0n16qUmbSgEak=",
-        "recordedInputs": [],
-        "generatedRepoSpecs": {
-          "androidsdk": {
-            "repoRuleId": "@@rules_android+//rules/android_sdk_repository:rule.bzl%_android_sdk_repository",
-            "attributes": {}
-          }
-        }
-      }
-    },
-    "@@rules_flutter+//flutter:extensions.bzl%flutter": {
-      "general": {
-        "bzlTransitiveDigest": "IgQ16avS1uVY34xIdYqncwEjA8nXAEm+AlALYB6FCAo=",
-        "usagesDigest": "OQt4SZjsV1ClP6tfY8TB4qOf34BPLgucA0EgdYeX/h4=",
+        "bzlTransitiveDigest": "NRiPxRlTkLo0d4dLDBO1QKeBsQqgxwIssn3BwSSLRuo=",
+        "usagesDigest": "CGPnE5pd2iySbry7QSTBfOMJ/71pq3yi6RwO8j3YWVU=",
         "recordedInputs": [
           "ENV:ACCEPTED_ANDROID_NDK_LICENSE_VERSION 28.2.13676358",
           "ENV:ACCEPTED_ANDROID_SDK_LICENSE_VERSION 36",
-          "REPO_MAPPING:hermetic_android_toolchains+,rules_android_ndk rules_android_ndk+",
-          "REPO_MAPPING:rules_flutter+,hermetic_android_toolchains hermetic_android_toolchains+"
+          "REPO_MAPPING:,rules_flutter +razemify_dependencies+rules_flutter",
+          "REPO_MAPPING:+razemify_dependencies+hermetic_android_toolchains,rules_android_ndk rules_android_ndk+",
+          "REPO_MAPPING:+razemify_dependencies+rules_flutter,hermetic_android_toolchains +razemify_dependencies+hermetic_android_toolchains"
         ],
         "generatedRepoSpecs": {
           "flutter_macos": {
-            "repoRuleId": "@@rules_flutter+//flutter:repositories.bzl%flutter_repositories",
+            "repoRuleId": "@@+razemify_dependencies+rules_flutter//flutter:repositories.bzl%flutter_repositories",
             "attributes": {
               "platform": "macos",
               "integrity": "",
@@ -313,7 +300,7 @@
             }
           },
           "flutter_macos_arm64": {
-            "repoRuleId": "@@rules_flutter+//flutter:repositories.bzl%flutter_repositories",
+            "repoRuleId": "@@+razemify_dependencies+rules_flutter//flutter:repositories.bzl%flutter_repositories",
             "attributes": {
               "platform": "macos_arm64",
               "integrity": "",
@@ -323,7 +310,7 @@
             }
           },
           "flutter_linux": {
-            "repoRuleId": "@@rules_flutter+//flutter:repositories.bzl%flutter_repositories",
+            "repoRuleId": "@@+razemify_dependencies+rules_flutter//flutter:repositories.bzl%flutter_repositories",
             "attributes": {
               "platform": "linux",
               "integrity": "",
@@ -333,7 +320,7 @@
             }
           },
           "flutter_linux_arm64": {
-            "repoRuleId": "@@rules_flutter+//flutter:repositories.bzl%flutter_repositories",
+            "repoRuleId": "@@+razemify_dependencies+rules_flutter//flutter:repositories.bzl%flutter_repositories",
             "attributes": {
               "platform": "linux_arm64",
               "integrity": "",
@@ -343,7 +330,7 @@
             }
           },
           "flutter_windows": {
-            "repoRuleId": "@@rules_flutter+//flutter:repositories.bzl%flutter_repositories",
+            "repoRuleId": "@@+razemify_dependencies+rules_flutter//flutter:repositories.bzl%flutter_repositories",
             "attributes": {
               "platform": "windows",
               "integrity": "",
@@ -353,19 +340,19 @@
             }
           },
           "flutter_toolchains": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:toolchains_repo.bzl%toolchains_repo",
+            "repoRuleId": "@@+razemify_dependencies+rules_flutter//flutter/private:toolchains_repo.bzl%toolchains_repo",
             "attributes": {
               "user_repository_name": "flutter"
             }
           },
           "flutter_sdk": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:sdk_repo.bzl%flutter_sdk_repo",
+            "repoRuleId": "@@+razemify_dependencies+rules_flutter//flutter/private:sdk_repo.bzl%flutter_sdk_repo",
             "attributes": {
               "user_repository_name": "flutter"
             }
           },
           "android_android_sdk_darwin": {
-            "repoRuleId": "@@hermetic_android_toolchains+//sdk:repositories.bzl%hermetic_android_sdk_platform_repository",
+            "repoRuleId": "@@+razemify_dependencies+hermetic_android_toolchains//sdk:repositories.bzl%hermetic_android_sdk_platform_repository",
             "attributes": {
               "platform": "darwin",
               "version": "36",
@@ -373,7 +360,7 @@
             }
           },
           "android_android_sdk_linux": {
-            "repoRuleId": "@@hermetic_android_toolchains+//sdk:repositories.bzl%hermetic_android_sdk_platform_repository",
+            "repoRuleId": "@@+razemify_dependencies+hermetic_android_toolchains//sdk:repositories.bzl%hermetic_android_sdk_platform_repository",
             "attributes": {
               "platform": "linux",
               "version": "36",
@@ -381,7 +368,7 @@
             }
           },
           "android_android_sdk_windows": {
-            "repoRuleId": "@@hermetic_android_toolchains+//sdk:repositories.bzl%hermetic_android_sdk_platform_repository",
+            "repoRuleId": "@@+razemify_dependencies+hermetic_android_toolchains//sdk:repositories.bzl%hermetic_android_sdk_platform_repository",
             "attributes": {
               "platform": "windows",
               "version": "36",
@@ -389,7 +376,7 @@
             }
           },
           "android_android_sdk": {
-            "repoRuleId": "@@hermetic_android_toolchains+//sdk:repositories.bzl%hermetic_android_sdk_repository",
+            "repoRuleId": "@@+razemify_dependencies+hermetic_android_toolchains//sdk:repositories.bzl%hermetic_android_sdk_repository",
             "attributes": {
               "platform_repositories": {
                 "darwin": "android_android_sdk_darwin",
@@ -401,28 +388,28 @@
             }
           },
           "androidndk_darwin": {
-            "repoRuleId": "@@hermetic_android_toolchains+//ndk:repositories.bzl%hermetic_android_ndk_platform_repository",
+            "repoRuleId": "@@+razemify_dependencies+hermetic_android_toolchains//ndk:repositories.bzl%hermetic_android_ndk_platform_repository",
             "attributes": {
               "platform": "darwin",
               "version": "28.2.13676358"
             }
           },
           "androidndk_linux": {
-            "repoRuleId": "@@hermetic_android_toolchains+//ndk:repositories.bzl%hermetic_android_ndk_platform_repository",
+            "repoRuleId": "@@+razemify_dependencies+hermetic_android_toolchains//ndk:repositories.bzl%hermetic_android_ndk_platform_repository",
             "attributes": {
               "platform": "linux",
               "version": "28.2.13676358"
             }
           },
           "androidndk_windows": {
-            "repoRuleId": "@@hermetic_android_toolchains+//ndk:repositories.bzl%hermetic_android_ndk_platform_repository",
+            "repoRuleId": "@@+razemify_dependencies+hermetic_android_toolchains//ndk:repositories.bzl%hermetic_android_ndk_platform_repository",
             "attributes": {
               "platform": "windows",
               "version": "28.2.13676358"
             }
           },
           "android_android_ndk": {
-            "repoRuleId": "@@hermetic_android_toolchains+//ndk:repositories.bzl%hermetic_android_ndk_repository",
+            "repoRuleId": "@@+razemify_dependencies+hermetic_android_toolchains//ndk:repositories.bzl%hermetic_android_ndk_repository",
             "attributes": {
               "platform_repositories": {
                 "darwin": "androidndk_darwin",
@@ -433,7 +420,7 @@
             }
           },
           "android_gradle": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:android_repositories.bzl%gradle_repository",
+            "repoRuleId": "@@+razemify_dependencies+rules_flutter//flutter/private:android_repositories.bzl%gradle_repository",
             "attributes": {
               "url": "https://services.gradle.org/distributions/gradle-8.9-bin.zip",
               "integrity": "sha256-1yXXB7+r1N/clYxiQAOzyArMwD9wN7USLEsdDvFc7Ks=",
@@ -441,7 +428,7 @@
             }
           },
           "android_toolchains": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:android_repositories.bzl%android_toolchains_repository",
+            "repoRuleId": "@@+razemify_dependencies+rules_flutter//flutter/private:android_repositories.bzl%android_toolchains_repository",
             "attributes": {
               "sdk_repository": "android_android_sdk",
               "ndk_repository": "android_android_ndk",
@@ -451,6 +438,98 @@
               "ndk_version": "28.2.13676358",
               "gradle_version": "8.9"
             }
+          }
+        }
+      }
+    },
+    "@@protobuf+//python/dist:system_python.bzl%system_python_extension": {
+      "general": {
+        "bzlTransitiveDigest": "pmsA+awieucfllLc2n7k8xEoPp0i5LF9Hw6mGX0cqSQ=",
+        "usagesDigest": "A+RWmbKdBBwZcBbNGNvfPbqG2vYZRjVrFp6x1iRUrAk=",
+        "recordedInputs": [],
+        "generatedRepoSpecs": {
+          "system_python": {
+            "repoRuleId": "@@protobuf+//python/dist:system_python.bzl%system_python",
+            "attributes": {
+              "minimum_python_version": "3.9"
+            }
+          }
+        }
+      }
+    },
+    "@@pybind11_bazel+//:internal_configure.bzl%internal_configure_extension": {
+      "general": {
+        "bzlTransitiveDigest": "NRXra7941UfmNUyIxnLt82V5hULluVGL2nBsijTl4j4=",
+        "usagesDigest": "D1r3lfzMuUBFxgG8V6o0bQTLMk3GkaGOaPzw53wrwyw=",
+        "recordedInputs": [
+          "REPO_MAPPING:pybind11_bazel+,bazel_tools bazel_tools",
+          "FILE:@@pybind11_bazel+//MODULE.bazel e6f4c20442eaa7c90d7190d8dc539d0ab422f95c65a57cc59562170c58ae3d34"
+        ],
+        "generatedRepoSpecs": {
+          "pybind11": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "build_file": "@@pybind11_bazel+//:pybind11-BUILD.bazel",
+              "strip_prefix": "pybind11-2.12.0",
+              "urls": [
+                "https://github.com/pybind/pybind11/archive/v2.12.0.zip"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "@@rules_android+//bzlmod_extensions:apksig.bzl%apksig_extension": {
+      "general": {
+        "bzlTransitiveDigest": "xNW2vYQ2NGvweMnSxue40Bhfp5A3ogJIS/tkg7qjKIs=",
+        "usagesDigest": "wLrLUdBOQnztFcFQraEsWu+M4xtuF82/ZGmnhyxO5/Q=",
+        "recordedInputs": [
+          "REPO_MAPPING:rules_android+,bazel_tools bazel_tools"
+        ],
+        "generatedRepoSpecs": {
+          "apksig": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "urls": [
+                "https://mirror.bazel.build/android.googlesource.com/platform/tools/apksig/+archive/24e3075e68ebe17c0b529bb24bfda819db5e2f3b.tar.gz"
+              ],
+              "sha256": "12e44fdbd219c5e1cc62099c2a01d775957603d2d4f693f8285f9d95d9a04e77",
+              "build_file": "@@rules_android+//bzlmod_extensions:apksig.BUILD"
+            }
+          }
+        }
+      }
+    },
+    "@@rules_android+//bzlmod_extensions:com_android_dex.bzl%com_android_dex_extension": {
+      "general": {
+        "bzlTransitiveDigest": "HYWmRJkl/Bm5qA5Q7vRI52ZfSoxubYxiwbnAS+8ozAU=",
+        "usagesDigest": "QffKrRLRrfyxMU5u/o3mDLJNoWRk/D5i2SIumoSgm3M=",
+        "recordedInputs": [
+          "REPO_MAPPING:rules_android+,bazel_tools bazel_tools"
+        ],
+        "generatedRepoSpecs": {
+          "com_android_dex": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "urls": [
+                "https://mirror.bazel.build/android.googlesource.com/platform/dalvik/+archive/5a81c499a569731e2395f7c8d13c0e0d4e17a2b6.tar.gz"
+              ],
+              "build_file": "@@rules_android+//bzlmod_extensions:com_android_dex.BUILD",
+              "sha256": "86b4848c038bf687fadc812239cb01fb8d1d15cef3125b480a0448360992b95d"
+            }
+          }
+        }
+      }
+    },
+    "@@rules_android+//rules/android_sdk_repository:rule.bzl%android_sdk_repository_extension": {
+      "general": {
+        "bzlTransitiveDigest": "qHbR00gVzVzkxX+PRtv4UGcUFMtBz7TK9CNYUWH8nIE=",
+        "usagesDigest": "x1HLqlqAwv0KTxojlsMXLqzK2rEGmh0n16qUmbSgEak=",
+        "recordedInputs": [],
+        "generatedRepoSpecs": {
+          "androidsdk": {
+            "repoRuleId": "@@rules_android+//rules/android_sdk_repository:rule.bzl%_android_sdk_repository",
+            "attributes": {}
           }
         }
       }

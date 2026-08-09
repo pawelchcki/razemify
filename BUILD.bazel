@@ -8,6 +8,26 @@ exports_files(
     visibility = ["//visibility:public"],
 )
 
+# Stable dependency-facing facade. Consumers should use these labels instead
+# of reaching into the repository's internal package layout.
+alias(
+    name = "flutter_razemify",
+    actual = "//flutter_razemify",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "flutter_razemify_android_debug",
+    actual = "//flutter_razemify:flutter_razemify_android_debug",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "flutter_razemify_android_release",
+    actual = "//flutter_razemify:flutter_razemify_android_release",
+    visibility = ["//visibility:public"],
+)
+
 # Rust lint and format gates, so CI needs no cargo/rustup toolchain.
 # Equivalent to `cargo clippy --workspace -- -D warnings` and
 # `cargo fmt --all --check`; see .bazelrc for the deny-warnings flag.
