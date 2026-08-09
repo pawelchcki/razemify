@@ -9,6 +9,8 @@ build --tool_java_runtime_version=remotejdk_17
 build:buildbuddy --bes_backend=grpcs://remote.buildbuddy.io
 build:buildbuddy --bes_results_url=https://app.buildbuddy.io/invocation/
 build:buildbuddy --remote_cache=grpcs://remote.buildbuddy.io
+build:buildbuddy --experimental_remote_downloader=grpcs://remote.buildbuddy.io
+build:buildbuddy --experimental_remote_downloader_local_fallback
 build:buildbuddy --remote_timeout=10m
 build:buildbuddy --remote_cache_compression
 build:buildbuddy --remote_cache_async
