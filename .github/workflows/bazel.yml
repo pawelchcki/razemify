@@ -46,7 +46,12 @@ jobs:
         run: |
           targets=(//...)
           if [[ "$EVENT_NAME" == "pull_request" ]]; then
-            targets+=(-//flutter_razemify/example:example_bundle)
+            # flutter_app expands to a public wrapper and a generated
+            # platform target; exclude both on pull requests.
+            targets+=(
+              -//flutter_razemify/example:example_bundle
+              -//flutter_razemify/example:example_bundle.appbundle
+            )
           fi
           bazel \
             --bazelrc="${{ steps.bazel-cache.outputs.bazelrc }}" \

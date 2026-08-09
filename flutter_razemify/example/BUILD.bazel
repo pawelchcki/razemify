@@ -1,5 +1,21 @@
 load("@rules_flutter//flutter:defs.bzl", "flutter_app", "flutter_library", "flutter_test")
 
+# Flutter 3.44 generates Android registrants for dev-only plugins even though
+# Gradle excludes those plugins from release compilation. Give application
+# packaging a production-only pubspec; tests continue to use the real pubspec.
+genrule(
+    name = "android_pubspec",
+    srcs = ["pubspec.yaml"],
+    outs = ["pubspec.android.yaml"],
+    cmd = """
+awk '
+BEGIN { skip = 0 }
+/^[^[:space:]#]/ { skip = ($$0 ~ /^dev_dependencies:/) }
+!skip { print }
+' $(location pubspec.yaml) > $@
+""",
+)
+
 flutter_library(
     name = "lib",
     srcs = glob(["lib/**"]),
@@ -19,26 +35,22 @@ flutter_library(
 flutter_library(
     name = "lib_android_debug",
     srcs = glob(["lib/**"]),
-    pubspec = "pubspec.yaml",
+    pubspec = ":android_pubspec",
     deps = [
         "//flutter_razemify:flutter_razemify_android_debug",
         "@flutter_razemify_example_deps//:all",
         "@flutter_sdk//flutter/packages/flutter",
-        "@flutter_sdk//flutter/packages/flutter_test",
-        "@flutter_sdk//flutter/packages/integration_test",
     ],
 )
 
 flutter_library(
     name = "lib_android_release",
     srcs = glob(["lib/**"]),
-    pubspec = "pubspec.yaml",
+    pubspec = ":android_pubspec",
     deps = [
         "//flutter_razemify:flutter_razemify_android_release",
         "@flutter_razemify_example_deps//:all",
         "@flutter_sdk//flutter/packages/flutter",
-        "@flutter_sdk//flutter/packages/flutter_test",
-        "@flutter_sdk//flutter/packages/integration_test",
     ],
 )
 
