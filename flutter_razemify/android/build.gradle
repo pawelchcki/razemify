@@ -116,6 +116,10 @@ def rustTargets = [
 def rustBuildTasks = rustTargets.collect { target ->
     tasks.register(target.task, Exec) {
         def profile = project.ext.isReleaseBuild ? "release" : "debug"
+        def ndkDir = android.ndkDirectory
+        def toolchainBin = file("${ndkDir}/toolchains/llvm/prebuilt/${ndkHost}/bin")
+        def linker = file("${toolchainBin}/${target.triple}${android.defaultConfig.minSdk}-clang")
+        def cargoHome = System.getenv("CARGO_HOME") ?: "${System.getProperty("user.home")}/.cargo"
 
         // Declare inputs and outputs so Gradle can skip unchanged Rust builds.
         inputs.dir("${projectDir}/../rust")
@@ -123,6 +127,23 @@ def rustBuildTasks = rustTargets.collect { target ->
         inputs.file("${projectDir}/../../razemify-core/Cargo.toml")
         inputs.file("${projectDir}/../../Cargo.toml")
         inputs.file("${projectDir}/../../Cargo.lock")
+        inputs.files(fileTree("${projectDir}/../..") {
+            include ".cargo/config", ".cargo/config.toml", "rust-toolchain", "rust-toolchain.toml"
+        })
+        inputs.files(fileTree(cargoHome) {
+            include "config", "config.toml"
+        })
+        inputs.file(linker).optional()
+        inputs.file(file("${toolchainBin}/llvm-ar")).optional()
+        inputs.property("cargoVersion", providers.exec {
+            commandLine "cargo", "--version"
+        }.standardOutput.asText)
+        inputs.property("rustcVersion", providers.exec {
+            commandLine "rustc", "--version"
+        }.standardOutput.asText)
+        inputs.property("rustFlags", providers.environmentVariable("RUSTFLAGS").orElse(""))
+        inputs.property("encodedRustFlags", providers.environmentVariable("CARGO_ENCODED_RUSTFLAGS").orElse(""))
+        inputs.property("rustupToolchain", providers.environmentVariable("RUSTUP_TOOLCHAIN").orElse(""))
         inputs.property("profile", profile)
         outputs.file("${projectDir}/src/main/jniLibs/${target.abi}/libflutter_razemify.so")
 
@@ -132,9 +153,6 @@ def rustBuildTasks = rustTargets.collect { target ->
         }
 
         doFirst {
-            def ndkDir = android.ndkDirectory
-            def toolchainBin = file("${ndkDir}/toolchains/llvm/prebuilt/${ndkHost}/bin")
-            def linker = file("${toolchainBin}/${target.triple}${android.defaultConfig.minSdk}-clang")
             if (!linker.exists()) {
                 throw new GradleException("Android NDK linker not found: ${linker}")
             }
