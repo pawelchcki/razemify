@@ -1,0 +1,61 @@
+load("@rules_rs//rs:rust_library.bzl", "rust_library")
+load("@rules_rs//rs:rust_test.bzl", "rust_test")
+
+# Feature-less build, used by the wasm target.
+rust_library(
+    name = "razemify_core",
+    srcs = glob(["src/**/*.rs"]),
+    edition = "2021",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:image",
+        "@crates//:kamadak-exif",
+        "@crates//:ndarray",
+    ],
+)
+
+# rembg feature (ONNX background removal via ort), used by the CLI.
+rust_library(
+    name = "razemify_core_rembg",
+    srcs = glob(["src/**/*.rs"]),
+    crate_features = ["rembg"],
+    crate_name = "razemify_core",
+    edition = "2021",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:image",
+        "@crates//:kamadak-exif",
+        "@crates//:ndarray",
+        "@crates//:ort",
+    ],
+)
+
+# flutter_ffi feature, used by the flutter plugin's native library.
+rust_library(
+    name = "razemify_core_flutter",
+    srcs = glob(["src/**/*.rs"]),
+    crate_features = ["flutter_ffi"],
+    crate_name = "razemify_core",
+    edition = "2021",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:image",
+        "@crates//:kamadak-exif",
+        "@crates//:ndarray",
+        "@crates//:serde_json",
+    ],
+)
+
+rust_test(
+    name = "razemify_core_test",
+    crate = ":razemify_core",
+    visibility = ["//:__pkg__"],
+)
+
+# The same unit tests against the feature-enabled build, which is what
+# `cargo test --workspace` exercises (razemify-cli turns on rembg).
+rust_test(
+    name = "razemify_core_rembg_test",
+    crate = ":razemify_core_rembg",
+    visibility = ["//:__pkg__"],
+)

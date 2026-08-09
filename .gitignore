@@ -53,3 +53,7 @@ Thumbs.db
 work_folder/
 output/
 output_rs/
+
+# Bazel
+bazel-*
+user.bazelrc

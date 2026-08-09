@@ -1,0 +1,28 @@
+# Selects the ONNX Runtime dylib matching the target platform. The version
+# must match what the resolved ort-sys crate pins (currently 1.28.0); ort
+# loads it at runtime through ORT_DYLIB_PATH.
+alias(
+    name = "onnxruntime",
+    actual = select({
+        "//third_party/onnxruntime:linux_arm64": "@onnxruntime_linux_aarch64//:dylib",
+        "//third_party/onnxruntime:macos_arm64": "@onnxruntime_osx_arm64//:dylib",
+        "//conditions:default": "@onnxruntime_linux_x64//:dylib",
+    }),
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "linux_arm64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:arm64",
+    ],
+)
+
+config_setting(
+    name = "macos_arm64",
+    constraint_values = [
+        "@platforms//os:macos",
+        "@platforms//cpu:arm64",
+    ],
+)

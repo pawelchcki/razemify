@@ -1,0 +1,223 @@
+module(
+    name = "razemify",
+    version = "0.1.0",
+    bazel_compatibility = [">=9.2.0"],
+)
+
+bazel_dep(name = "rules_rs", version = "0.0.102")
+bazel_dep(name = "llvm", version = "0.8.16")
+bazel_dep(name = "platforms", version = "1.1.0")
+
+# These are the public dependencies of the pinned rules_flutter fork. The fork
+# itself and its patched Android SDK provider are fetched by our extension so
+# their source selection remains effective when Razemify is not the root
+# module (Bzlmod deliberately ignores overrides declared by dependencies).
+bazel_dep(name = "apple_support", version = "1.24.2")
+bazel_dep(name = "bazel_skylib", version = "1.9.0")
+bazel_dep(name = "protobuf", version = "34.0.bcr.1")
+bazel_dep(name = "rules_android", version = "0.7.3")
+bazel_dep(name = "rules_android_ndk", version = "0.1.5")
+bazel_dep(name = "rules_cc", version = "0.2.22")
+bazel_dep(name = "rules_java", version = "9.3.0")
+bazel_dep(name = "rules_shell", version = "0.6.1")
+
+razemify_dependencies = use_extension("//bazel:repositories.bzl", "razemify_dependencies")
+use_repo(
+    razemify_dependencies,
+    "hermetic_android_toolchains",
+    "rules_flutter",
+)
+
+toolchains = use_extension("@rules_rs//rs/toolchains:module_extension.bzl", "toolchains")
+toolchains.toolchain(
+    edition = "2021",
+    version = "1.97.1",
+)
+use_repo(toolchains, "default_rust_toolchains")
+
+register_toolchains(
+    "@default_rust_toolchains//:all",
+    "@llvm//toolchain:all",
+)
+
+# rules_rs wraps the rules_rust build rules but does not re-export its
+# rustfmt/clippy aspects, so pull the same pinned repo in directly for those.
+rules_rust = use_extension("@rules_rs//rs:rules_rust.bzl", "rules_rust")
+use_repo(rules_rust, "rules_rust")
+
+crate = use_extension("@rules_rs//rs:extensions.bzl", "crate")
+crate.from_cargo(
+    name = "crates",
+    cargo_lock = "//:Cargo.lock",
+    cargo_toml = "//:Cargo.toml",
+    platform_triples = [
+        "x86_64-unknown-linux-gnu",
+        "aarch64-unknown-linux-gnu",
+        "aarch64-apple-darwin",
+        "wasm32-unknown-unknown",
+        # Android triples are resolved so @crates targets exist for them;
+        # linking an Android cdylib still needs an NDK cc toolchain (follow-up).
+        "aarch64-linux-android",
+        "armv7-linux-androideabi",
+        "i686-linux-android",
+        "x86_64-linux-android",
+    ],
+)
+
+# razemify-core uses ort with `load-dynamic`, which turns on
+# ort-sys/disable-linking: the build script would exit without doing anything,
+# so skip compiling it entirely. The ONNX Runtime dylib is provided at runtime
+# via ORT_DYLIB_PATH (see //third_party/onnxruntime).
+crate.annotation(
+    crate = "ort-sys",
+    gen_build_script = "off",
+)
+
+# Our own wasm-bindgen CLI universe: the CLI's schema version must match the
+# wasm-bindgen crate version in //:Cargo.lock, and the toolchain bundled with
+# rules_rs lags behind. Keep third_party/wasm_bindgen/Cargo.toml in lockstep
+# with the workspace's wasm-bindgen version.
+crate.from_cargo(
+    name = "wbd",
+    cargo_lock = "//third_party/wasm_bindgen:Cargo.lock",
+    cargo_toml = "//third_party/wasm_bindgen:Cargo.toml",
+    platform_triples = [
+        "x86_64-unknown-linux-gnu",
+        "aarch64-unknown-linux-gnu",
+        "aarch64-apple-darwin",
+        "wasm32-unknown-unknown",
+    ],
+)
+crate.annotation(
+    crate = "wasm-bindgen-cli",
+    gen_binaries = ["wasm-bindgen"],
+    repositories = ["wbd"],
+)
+use_repo(crate, "crates", "wbd")
+
+wasm_bindgen = use_extension("@rules_rs//rs:rules_rust_wasm_bindgen.bzl", "rules_rust_wasm_bindgen")
+use_repo(wasm_bindgen, "rules_rust_wasm_bindgen")
+
+# Ours first: toolchain resolution picks the first registered match.
+register_toolchains(
+    "//third_party/wasm_bindgen:wasm_bindgen_toolchain",
+    "@rules_rust_wasm_bindgen//:default_wasm_bindgen_toolchain",
+)
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+maven_repository = use_repo_rule("//third_party/android_maven:maven_repository.bzl", "maven_repository")
+
+maven_repository(
+    name = "android_maven",
+    manifest = "//third_party/android_maven:maven_manifest.json",
+)
+
+# ONNX Runtime version must match what the resolved ort-sys crate pins
+# (build/download/dist.tsv in the ort-sys sources): ort-sys 2.0.0-rc.13 -> 1.28.0.
+http_archive(
+    name = "onnxruntime_linux_x64",
+    build_file = "//third_party/onnxruntime:onnxruntime.BUILD",
+    sha256 = "a3e1b79d7bb1bf09696ce675f49e4064e6c81f6202b8225624fff0e93f8d6407",
+    strip_prefix = "onnxruntime-linux-x64-1.28.0",
+    url = "https://github.com/microsoft/onnxruntime/releases/download/v1.28.0/onnxruntime-linux-x64-1.28.0.tgz",
+)
+
+http_archive(
+    name = "onnxruntime_linux_aarch64",
+    build_file = "//third_party/onnxruntime:onnxruntime.BUILD",
+    sha256 = "e15ff8b5d85afe6c144d97c6fd432254bf76a219daaf17658087d6ecb3e8f0bb",
+    strip_prefix = "onnxruntime-linux-aarch64-1.28.0",
+    url = "https://github.com/microsoft/onnxruntime/releases/download/v1.28.0/onnxruntime-linux-aarch64-1.28.0.tgz",
+)
+
+http_archive(
+    name = "onnxruntime_osx_arm64",
+    build_file = "//third_party/onnxruntime:onnxruntime.BUILD",
+    sha256 = "1268b359718099bde2cedb55787f182a130067bc4f31e8c88478c445b850d3d8",
+    strip_prefix = "onnxruntime-osx-arm64-1.28.0",
+    url = "https://github.com/microsoft/onnxruntime/releases/download/v1.28.0/onnxruntime-osx-arm64-1.28.0.tgz",
+)
+
+# Re-exporting the extension from Razemify gives consumers the same extension
+# identity and therefore the same Flutter providers, SDK, and pub repositories.
+flutter = use_extension("//bazel:flutter_extensions.bzl", "flutter")
+flutter.toolchain(flutter_version = "3.44.7")
+
+flutter_dev = use_extension(
+    "//bazel:flutter_extensions.bzl",
+    "flutter",
+    dev_dependency = True,
+)
+flutter_dev.android_toolchain(
+    name = "android",
+    build_tools_version = "36.0.0",
+    gradle_distribution_integrity = "sha256-1yXXB7+r1N/clYxiQAOzyArMwD9wN7USLEsdDvFc7Ks=",
+    gradle_distribution_url = "https://services.gradle.org/distributions/gradle-8.9-bin.zip",
+    ndk_version = "28.2.13676358",
+    sdk_version = "36",
+)
+use_repo(
+    flutter_dev,
+    "android_android_ndk",
+    "android_toolchains",
+)
+
+use_repo(
+    flutter,
+    "flutter_sdk",
+    "flutter_toolchains",
+)
+
+register_toolchains(
+    "@flutter_toolchains//:all",
+)
+
+register_toolchains(
+    "@android_android_ndk//:all",
+    "@android_toolchains//:all",
+    dev_dependency = True,
+)
+
+pub = use_extension("//bazel:flutter_extensions.bzl", "pub")
+pub.lock(
+    name = "flutter_razemify_deps",
+    file = "//flutter_razemify:pubspec.lock",
+)
+pub.package(
+    name = "pub_fixnum",
+    package = "fixnum",
+    version = "1.1.1",
+)
+pub.package(
+    name = "pub_meta",
+    package = "meta",
+    version = "1.15.0",
+)
+pub.package(
+    name = "pub_path",
+    package = "path",
+    version = "1.9.0",
+)
+pub.package(
+    name = "pub_protobuf",
+    package = "protobuf",
+    version = "3.1.0",
+)
+pub.package(
+    name = "pub_protoc_plugin",
+    package = "protoc_plugin",
+    version = "21.1.1",
+)
+use_repo(pub, "flutter_razemify_deps", "pub_fixnum", "pub_meta", "pub_path", "pub_protobuf", "pub_protoc_plugin")
+
+pub_dev = use_extension(
+    "//bazel:flutter_extensions.bzl",
+    "pub",
+    dev_dependency = True,
+)
+pub_dev.lock(
+    name = "flutter_razemify_example_deps",
+    file = "//flutter_razemify/example:pubspec.lock",
+)
+use_repo(pub_dev, "flutter_razemify_example_deps")

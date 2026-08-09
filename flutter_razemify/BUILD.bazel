@@ -1,0 +1,69 @@
+load("@rules_flutter//flutter:defs.bzl", "dart_format_test", "flutter_analyze_test", "flutter_library")
+
+_ANDROID_SRCS = glob(
+    [
+        "android/**",
+        "lib/**",
+    ],
+    exclude = [
+        "android/**/.cxx/**",
+        "android/**/build/**",
+        "android/**/jniLibs/**",
+        "android/.gradle/**",
+        "android/captures/**",
+        "android/local.properties",
+    ],
+)
+
+flutter_library(
+    name = "flutter_razemify",
+    srcs = glob(["lib/**"]),
+    pubspec = "pubspec.yaml",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@flutter_razemify_deps//:all",
+        "@flutter_sdk//flutter/packages/flutter",
+    ],
+)
+
+flutter_library(
+    name = "flutter_razemify_android_debug",
+    srcs = _ANDROID_SRCS,
+    generated_srcs = {
+        "//flutter_razemify/rust:flutter_razemify_arm64_v8a": "android/src/main/jniLibs/arm64-v8a",
+    },
+    pubspec = "pubspec.yaml",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@flutter_razemify_deps//:all",
+        "@flutter_sdk//flutter/packages/flutter",
+    ],
+)
+
+flutter_library(
+    name = "flutter_razemify_android_release",
+    srcs = _ANDROID_SRCS,
+    generated_srcs = {
+        "//flutter_razemify/rust:flutter_razemify_arm64_v8a_opt": "android/src/main/jniLibs/arm64-v8a",
+        "//flutter_razemify/rust:flutter_razemify_armeabi_v7a_opt": "android/src/main/jniLibs/armeabi-v7a",
+        "//flutter_razemify/rust:flutter_razemify_x86_64_opt": "android/src/main/jniLibs/x86_64",
+        "//flutter_razemify/rust:flutter_razemify_x86_opt": "android/src/main/jniLibs/x86",
+    },
+    pubspec = "pubspec.yaml",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@flutter_razemify_deps//:all",
+        "@flutter_sdk//flutter/packages/flutter",
+    ],
+)
+
+flutter_analyze_test(
+    name = "analyze",
+    srcs = ["analysis_options.yaml"],
+    embed = [":flutter_razemify"],
+)
+
+dart_format_test(
+    name = "format",
+    srcs = glob(["lib/**/*.dart"]),
+)

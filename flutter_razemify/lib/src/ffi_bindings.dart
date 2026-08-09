@@ -1,43 +1,46 @@
 import 'dart:ffi' as ffi;
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 import 'models.dart';
 
 /// FFI function signatures matching Rust implementation
-typedef ProcessBytesNative = ffi.Int32 Function(
-  ffi.Pointer<ffi.Uint8> inputData,
-  ffi.Size inputLen,
-  ffi.Pointer<ffi.Uint8> outputData,
-  ffi.Pointer<ffi.Uint32> outputWidth,
-  ffi.Pointer<ffi.Uint32> outputHeight,
-  ffi.Pointer<Utf8> presetName,
-  ffi.Pointer<Utf8> paletteName,
-);
+typedef ProcessBytesNative =
+    ffi.Int32 Function(
+      ffi.Pointer<ffi.Uint8> inputData,
+      ffi.Size inputLen,
+      ffi.Pointer<ffi.Uint8> outputData,
+      ffi.Pointer<ffi.Uint32> outputWidth,
+      ffi.Pointer<ffi.Uint32> outputHeight,
+      ffi.Pointer<Utf8> presetName,
+      ffi.Pointer<Utf8> paletteName,
+    );
 
-typedef ProcessBytesDart = int Function(
-  ffi.Pointer<ffi.Uint8> inputData,
-  int inputLen,
-  ffi.Pointer<ffi.Uint8> outputData,
-  ffi.Pointer<ffi.Uint32> outputWidth,
-  ffi.Pointer<ffi.Uint32> outputHeight,
-  ffi.Pointer<Utf8> presetName,
-  ffi.Pointer<Utf8> paletteName,
-);
+typedef ProcessBytesDart =
+    int Function(
+      ffi.Pointer<ffi.Uint8> inputData,
+      int inputLen,
+      ffi.Pointer<ffi.Uint8> outputData,
+      ffi.Pointer<ffi.Uint32> outputWidth,
+      ffi.Pointer<ffi.Uint32> outputHeight,
+      ffi.Pointer<Utf8> presetName,
+      ffi.Pointer<Utf8> paletteName,
+    );
 
-typedef GetOutputSizeNative = ffi.Int32 Function(
-  ffi.Pointer<ffi.Uint8> inputData,
-  ffi.Size inputLen,
-  ffi.Pointer<ffi.Uint32> widthOut,
-  ffi.Pointer<ffi.Uint32> heightOut,
-);
+typedef GetOutputSizeNative =
+    ffi.Int32 Function(
+      ffi.Pointer<ffi.Uint8> inputData,
+      ffi.Size inputLen,
+      ffi.Pointer<ffi.Uint32> widthOut,
+      ffi.Pointer<ffi.Uint32> heightOut,
+    );
 
-typedef GetOutputSizeDart = int Function(
-  ffi.Pointer<ffi.Uint8> inputData,
-  int inputLen,
-  ffi.Pointer<ffi.Uint32> widthOut,
-  ffi.Pointer<ffi.Uint32> heightOut,
-);
+typedef GetOutputSizeDart =
+    int Function(
+      ffi.Pointer<ffi.Uint8> inputData,
+      int inputLen,
+      ffi.Pointer<ffi.Uint32> widthOut,
+      ffi.Pointer<ffi.Uint32> heightOut,
+    );
 
 // Note: c_char in Rust is i8 (signed), not u8
 typedef FreeStringNative = ffi.Void Function(ffi.Pointer<ffi.Int8>);
@@ -87,8 +90,12 @@ ffi.DynamicLibrary _loadLibrary() {
 
     // Verify critical symbols exist
     try {
-      lib.lookup<ffi.NativeFunction<ProcessBytesNative>>('razemify_process_bytes');
-      lib.lookup<ffi.NativeFunction<GetOutputSizeNative>>('razemify_get_output_size');
+      lib.lookup<ffi.NativeFunction<ProcessBytesNative>>(
+        'razemify_process_bytes',
+      );
+      lib.lookup<ffi.NativeFunction<GetOutputSizeNative>>(
+        'razemify_get_output_size',
+      );
       lib.lookup<ffi.NativeFunction<FreeStringNative>>('razemify_free_string');
     } catch (e) {
       throw RazemifyException(
@@ -116,7 +123,9 @@ class RazemifyBindings {
       .asFunction();
 
   static final GetOutputSizeDart getOutputSize = _lib
-      .lookup<ffi.NativeFunction<GetOutputSizeNative>>('razemify_get_output_size')
+      .lookup<ffi.NativeFunction<GetOutputSizeNative>>(
+        'razemify_get_output_size',
+      )
       .asFunction();
 
   static final FreeStringDart freeString = _lib

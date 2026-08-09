@@ -1,0 +1,28 @@
+load("@rules_rs//rs:rust_shared_library.bzl", "rust_shared_library")
+load("@rules_rust_wasm_bindgen//:defs.bzl", "rust_wasm_bindgen")
+
+rust_shared_library(
+    name = "razemify_wasm_cdylib",
+    srcs = glob(["src/**/*.rs"]),
+    crate_features = ["console_error_panic_hook"],
+    edition = "2021",
+    # Visible so the root //:clippy and //:rustfmt gates can reach it.
+    visibility = ["//:__pkg__"],
+    deps = [
+        "//razemify-core:razemify_core",
+        "@crates//:console_error_panic_hook",
+        "@crates//:image",
+        "@crates//:js-sys",
+        "@crates//:wasm-bindgen",
+        "@crates//:web-sys",
+    ],
+)
+
+# Applies the wasm32-unknown-unknown transition itself and runs wasm-bindgen,
+# producing the JS glue + .wasm as wasm-pack --target web would.
+rust_wasm_bindgen(
+    name = "razemify_wasm",
+    target = "web",
+    visibility = ["//visibility:public"],
+    wasm_file = ":razemify_wasm_cdylib",
+)

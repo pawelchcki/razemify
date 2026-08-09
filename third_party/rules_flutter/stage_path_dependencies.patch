@@ -1,0 +1,132 @@
+diff --git a/flutter/private/flutter_actions.bzl b/flutter/private/flutter_actions.bzl
+--- a/flutter/private/flutter_actions.bzl
++++ b/flutter/private/flutter_actions.bzl
+@@ -1311,6 +1311,27 @@ export PUB_CACHE="$RW_PUB_CACHE"
+ export PUB_CACHE_DIR_ABS="$RW_PUB_CACHE"
+ export PUB_CACHE_ABS="$RW_PUB_CACHE"
+ 
++# Path dependencies are staged under the assembled cache because their source
++# location is outside this package's prepared workspace. Point the mutable
++# pubspec copy at those staged packages before asking pub to resolve it.
++awk -v cache="$RW_PUB_CACHE/path" '
++BEGIN { section = 0; package = "" }
++/^[^[:space:]#][^:]*:/ {
++    section = ($0 ~ /^(dependencies|dev_dependencies|dependency_overrides):/);
++    package = "";
++}
++section && /^  [A-Za-z0-9_-]+:[[:space:]]*$/ {
++    package = $0;
++    sub(/^  /, "", package);
++    sub(/:[[:space:]]*$/, "", package);
++}
++section && package != "" && /^    path:[[:space:]]*/ {
++    print "    path: " cache "/" package;
++    next;
++}
++{ print }' pubspec.yaml > pubspec.yaml.bazel.tmp
++mv pubspec.yaml.bazel.tmp pubspec.yaml
++
+ echo "Running flutter pub get --offline to regenerate plugin tooling..."
+ if ! "$FLUTTER_BIN_ABS" --suppress-analytics --no-version-check pub get --offline; then
+     echo "✗ FATAL ERROR: flutter pub get --offline failed" >&2
+@@ -1503,8 +1524,12 @@ FAST_STAGING="{fast_staging}"
+ _stage_tree "$SOURCE_WORKSPACE_ABS" "$BUILD_WORKSPACE_TMP" "$FAST_STAGING"
+ if [ "$FAST_STAGING" = "1" ]; then
+     _make_dirs_writable "$BUILD_WORKSPACE_TMP"
+-    _unshare_file "$BUILD_WORKSPACE_TMP/pubspec.yaml"
+-    _unshare_file "$BUILD_WORKSPACE_TMP/pubspec.lock"
++    # Flutter's project migrators may rewrite any source file. Break every
++    # staging hardlink before invoking Flutter so those writes neither fail
++    # nor mutate Bazel's input tree.
++    while IFS= read -r FILE; do
++        _unshare_file "$FILE"
++    done < <(find "$BUILD_WORKSPACE_TMP" -type f -print)
+ else
+     chmod -R u+rwX "$BUILD_WORKSPACE_TMP"
+ fi
+@@ -1653,7 +1678,7 @@ def flutter_build_action(
+     use_default_shell_env = False
+     mnemonic = "FlutterBuild"
+     if target in ANDROID_TARGETS:
+-        execution_requirements = heavy_action_execution_requirements(allow_remote_exec)
++        execution_requirements = host_bound_action_execution_requirements(dependencies_declared = True)
+         use_default_shell_env = False
+         mnemonic = "FlutterBuildAndroid"
+     elif target == "ios":
+diff --git a/flutter/private/android.init.gradle.kts b/flutter/private/android.init.gradle.kts
+--- a/flutter/private/android.init.gradle.kts
++++ b/flutter/private/android.init.gradle.kts
+@@ -1,4 +1,5 @@
+ import org.gradle.api.artifacts.repositories.MavenArtifactRepository
++import org.gradle.api.initialization.resolve.RepositoriesMode
+ 
+ val mirror = System.getenv("RULES_FLUTTER_MAVEN_MIRROR")
+     ?: error("RULES_FLUTTER_MAVEN_MIRROR is required")
+@@ -12,9 +13,11 @@ fun org.gradle.api.artifacts.dsl.RepositoryHandler.useRulesFlutterMirror() {
+ 
+ gradle.beforeSettings {
+     pluginManagement.repositories.useRulesFlutterMirror()
+-    dependencyResolutionManagement.repositories.useRulesFlutterMirror()
+ }
+-allprojects {
+-    buildscript.repositories.useRulesFlutterMirror()
+-    repositories.useRulesFlutterMirror()
++gradle.settingsEvaluated {
++    dependencyResolutionManagement.repositories.useRulesFlutterMirror()
++    dependencyResolutionManagement.repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
++}
++gradle.beforeProject {
++    buildscript.repositories.useRulesFlutterMirror()
+ }
+diff --git a/flutter/private/android_sdk_tree.bzl b/flutter/private/android_sdk_tree.bzl
+--- a/flutter/private/android_sdk_tree.bzl
++++ b/flutter/private/android_sdk_tree.bzl
+@@ -27,6 +27,10 @@ place() {{
+   # $1 source, $2 destination.
++  if [ -L "$1" ]; then
++    cp -pL "$1" "$2"
++    return 0
++  fi
+   if [ "$LINK_FILES" = "1" ] && ln "$1" "$2" 2>/dev/null; then
+     return 0
+   fi
+@@ -67,6 +71,13 @@ done < "$component_manifest"
+ printf '%s\\n' '8933bad161af4178b1185d1a37fbf41ea5269c55' > "$out/licenses/android-sdk-license"
++# Flutter uses apkanalyzer only to list an AAB's entries after Gradle has
++# packaged it. Provide that hermetically through the JDK already in the action.
++mkdir -p "$out/cmdline-tools/latest/bin"
++printf '%s\\n' '#!/bin/sh' \\
++  'test "$1" = files && test "$2" = list || exit 2' \\
++  'exec "$JAVA_HOME/bin/jar" tf "$3"' > "$out/cmdline-tools/latest/bin/apkanalyzer"
++chmod +x "$out/cmdline-tools/latest/bin/apkanalyzer"
+ if [ -s "$ndk_manifest" ]; then
+   mkdir -p "$out/ndk/{ndk_version}"
+   while IFS= read -r source; do
+@@ -101,6 +112,7 @@ fi
+             ],
+         ),
+         outputs = [output],
++        execution_requirements = {"no-remote": "1"},
+         mnemonic = "AndroidSdkTree",
+         progress_message = "Materializing hermetic Android SDK for %{label}",
+     )
+diff --git a/flutter/private/android_repositories.bzl b/flutter/private/android_repositories.bzl
+--- a/flutter/private/android_repositories.bzl
++++ b/flutter/private/android_repositories.bzl
+@@ -34,7 +34,15 @@ toolchain_type(name = "toolchain_type")
+     for platform, constraints in _PLATFORMS.items():
+         ndk_files = ""
+         if ctx.attr.ndk_repository:
+-            ndk_files = 'ndk_files = "@androidndk_{platform}//:ndk_files",'.format(platform = platform)
++            content += """filegroup(
++    name = "ndk_{platform}_files",
++    srcs = [
++        "@androidndk_{platform}//:ndk_files",
++        "@androidndk_{platform}//toolchains/llvm/prebuilt/{platform}-x86_64:all_files",
++    ],
++)
++""".format(platform = platform)
++            ndk_files = 'ndk_files = ":ndk_{platform}_files",'.format(platform = platform)
+         content += """android_sdk_tree(
+     name = \"sdk_{platform}\",
+     platform_files = \"@{sdk_repository}//:platform_files\",
