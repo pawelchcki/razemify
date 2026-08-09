@@ -1,5 +1,6 @@
 load("@rules_rs//rs:rust_shared_library.bzl", "rust_shared_library")
 load("@rules_rs//rs:rust_static_library.bzl", "rust_static_library")
+load("//bazel:opt_transition.bzl", "optimized_target")
 
 # Host-platform builds of the plugin's native library. The Android .so is
 # still produced by the Gradle cargo shim (needs an NDK cc toolchain in
@@ -20,6 +21,22 @@ load("@rules_rs//rs:rust_static_library.bzl", "rust_static_library")
         "x86": "x86",
         "x86_64": "x86_64",
     }.items()
+]
+
+# Release Flutter artifacts always receive optimized Rust libraries, even when
+# the consuming Bazel invocation uses its default fastbuild configuration.
+[
+    optimized_target(
+        name = "flutter_razemify_{}_opt".format(abi),
+        target = ":flutter_razemify_{}".format(abi),
+        visibility = ["//visibility:public"],
+    )
+    for abi in [
+        "arm64_v8a",
+        "armeabi_v7a",
+        "x86",
+        "x86_64",
+    ]
 ]
 
 rust_static_library(
