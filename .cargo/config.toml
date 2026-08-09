@@ -1,2 +1,6 @@
 [alias]
 xtask = "run --package xtask --"
+
+# To enable sccache for cross-target compilation caching (recommended for
+# Android multi-ABI builds), set RUSTC_WRAPPER=sccache in your environment.
+# Install: cargo install sccache (or via package manager)
