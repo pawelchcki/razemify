@@ -2,6 +2,7 @@ exports_files([
     "README.md",
     "defs.bzl",
     "flutter_razemify_widget_test.dart",
+    "rules_android_manifest_log_determinism.patch",
     "rustix_determinism.patch",
     "rules_rs_bootstrap_determinism.patch",
 ])

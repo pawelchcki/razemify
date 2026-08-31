@@ -1,0 +1,14 @@
+diff --git a/rules/resources.bzl b/rules/resources.bzl
+--- a/rules/resources.bzl
++++ b/rules/resources.bzl
+@@ -679,9 +679,7 @@ def _process_resources(
+             _busybox.merge_manifests(
+                 ctx,
+                 out_file = merged_manifest,
+-                out_log_file = ctx.actions.declare_file(
+-                    "_migrated/_merged/" + ctx.label.name + "/manifest_merger_log.txt",
+-                ),
++                out_log_file = None,
+                 manifest = g3itr_manifest,
+                 mergee_manifests = mergee_manifests,
+                 manifest_values = manifest_values,

@@ -55,9 +55,13 @@ archive_override(
 
 # hermetic_android_toolchains tracks rules_android 0.7.3, but its repository
 # replacement interface is compatible with the 0.7.2 stack pinned by the
-# rules_flutter revision used here.
+# rules_flutter revision used here. The patch suppresses an unconsumed manifest
+# merger diagnostic whose contents include the per-action sandbox path; the
+# merged manifest remains a declared, byte-for-byte checked output.
 single_version_override(
     module_name = "rules_android",
+    patch_strip = 1,
+    patches = ["//bazel:rules_android_manifest_log_determinism.patch"],
     version = "0.7.2",
 )
 
@@ -171,6 +175,7 @@ crate.annotation(
     gen_binaries = ["wasm-bindgen"],
     repositories = ["wbd"],
 )
+
 # rustix's compiler feature probes leave their temporary rmeta in OUT_DIR.
 # The file is not consumed, and its metadata contains the output-base path.
 crate.annotation(
