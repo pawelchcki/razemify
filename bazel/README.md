@@ -68,6 +68,12 @@ archive_override(
     strip_prefix = "hermetic_android_toolchains-e723dd55401eaae04019e546e2f9bf78d0f33acf",
     urls = ["https://github.com/keith/hermetic_android_toolchains/archive/e723dd55401eaae04019e546e2f9bf78d0f33acf.tar.gz"],
 )
+archive_override(
+    module_name = "rules_android_ndk",
+    sha256 = "07e7a2777113bb3d0a432265d1c78cfaa140a5bc4c82be4c8cd988b34382ec90",
+    strip_prefix = "rules_android_ndk-0.1.5",
+    urls = ["https://github.com/bazelbuild/rules_android_ndk/releases/download/v0.1.5/rules_android_ndk-v0.1.5.tar.gz"],
+)
 single_version_override(module_name = "rules_android", version = "0.7.2")
 
 android = use_extension(

@@ -2,7 +2,22 @@ load(
     "//bazel:defs.bzl",
     "flutter_android_app",
     "flutter_application",
-    "flutter_test",
+    "flutter_library",
+)
+
+exports_files(["test/widget_test.dart"])
+
+flutter_library(
+    name = "example_library",
+    package_name = "flutter_razemify_example",
+    srcs = ["lib/main.dart"],
+    visibility = ["//bazel:__pkg__"],
+    deps = [
+        "//flutter_razemify",
+        "@flutter_razemify_deps//:flutter",
+        "@flutter_razemify_deps//:image_picker",
+        "@rules_flutter//flutter:material_icons",
+    ],
 )
 
 flutter_application(
@@ -37,15 +52,7 @@ flutter_android_app(
 )
 
 # integration_test/ needs a real device or emulator and remains outside Bazel.
-flutter_test(
+test_suite(
     name = "widget_test",
-    main = "//bazel:flutter_razemify_widget_test.dart",
-    package_name = "flutter_razemify_widget_test",
-    deps = [
-        "//flutter_razemify",
-        "@flutter_razemify_deps//:flutter",
-        "@flutter_razemify_deps//:flutter_test",
-        "@flutter_razemify_deps//:image_picker",
-        "@rules_flutter//flutter:material_icons",
-    ],
+    tests = ["//bazel:flutter_razemify_widget_test"],
 )

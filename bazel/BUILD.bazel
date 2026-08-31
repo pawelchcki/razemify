@@ -1,7 +1,19 @@
+load("//bazel:defs.bzl", "flutter_test")
+
+flutter_test(
+    name = "flutter_razemify_widget_test",
+    main = "//flutter_razemify/example:test/widget_test.dart",
+    package_name = "flutter_razemify_example_test",
+    visibility = ["//flutter_razemify/example:__pkg__"],
+    deps = [
+        "//flutter_razemify/example:example_library",
+        "@flutter_razemify_deps//:flutter_test",
+    ],
+)
+
 exports_files([
     "README.md",
     "defs.bzl",
-    "flutter_razemify_widget_test.dart",
     "rules_android_manifest_log_determinism.patch",
     "rustix_determinism.patch",
     "rules_rs_bootstrap_determinism.patch",
