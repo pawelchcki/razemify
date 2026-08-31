@@ -1,8 +1,14 @@
 common --enable_platform_specific_config
-common --repo_env=ACCEPTED_ANDROID_SDK_LICENSE_VERSION=36
-common --repo_env=ACCEPTED_ANDROID_NDK_LICENSE_VERSION=28.2.13676358
-build --java_runtime_version=remotejdk_17
-build --tool_java_runtime_version=remotejdk_17
+# These values record acceptance of the corresponding Google Android SDK/NDK
+# licenses and must match the hermetic toolchain versions in MODULE.bazel.
+common --repo_env=ACCEPTED_ANDROID_SDK_LICENSE_VERSION=35
+common --repo_env=ACCEPTED_ANDROID_NDK_LICENSE_VERSION=r28c
+common --java_runtime_version=remotejdk_25
+common --tool_java_language_version=25
+common --tool_java_runtime_version=remotejdk_25
+
+# Match Gradle's manifest merger: plugin library permissions must reach the APK.
+common --merge_android_manifest_permissions
 
 # BuildBuddy is opt-in so a fresh clone works without credentials. See
 # user.bazelrc.example; --config=remote also enables this cache/BES config.
@@ -20,7 +26,7 @@ build:buildbuddy --bes_upload_mode=fully_async
 
 # //:clippy is a gate, so warnings must fail it -- the equivalent of
 # `cargo clippy -- -D warnings`.
-build --@rules_rust//rust/settings:clippy_flag=-Dwarnings
+build --@rules_rs_internal//rust/settings:clippy_flag=-Dwarnings
 
 build:opt --compilation_mode=opt
 

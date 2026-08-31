@@ -1,30 +1,25 @@
-"""Flutter rule API backed by the exact ruleset used to build Razemify."""
+"""Public Bazel-native Flutter and Dart APIs used by Razemify consumers."""
 
 load(
-    "@rules_flutter//flutter:defs.bzl",
-    _DartLibraryInfo = "DartLibraryInfo",
-    _DartProtoLibraryInfo = "DartProtoLibraryInfo",
-    _FlutterLibraryInfo = "FlutterLibraryInfo",
+    "@rules_dart//dart:defs.bzl",
+    _dart_analysis_options = "dart_analysis_options",
+    _dart_analyze_test = "dart_analyze_test",
     _dart_format_test = "dart_format_test",
-    _dart_library = "dart_library",
-    _dart_proto_library = "dart_proto_library",
-    _flutter_analyze_test = "flutter_analyze_test",
-    _flutter_app = "flutter_app",
-    _flutter_build_settings = "flutter_build_settings",
-    _flutter_goldens = "flutter_goldens",
+)
+load("@rules_flutter//flutter:android.bzl", _flutter_android_app = "flutter_android_app")
+load(
+    "@rules_flutter//flutter:defs.bzl",
+    _flutter_application = "flutter_application",
     _flutter_library = "flutter_library",
+    _flutter_plugin = "flutter_plugin",
     _flutter_test = "flutter_test",
 )
 
-DartLibraryInfo = _DartLibraryInfo
-DartProtoLibraryInfo = _DartProtoLibraryInfo
-FlutterLibraryInfo = _FlutterLibraryInfo
+dart_analysis_options = _dart_analysis_options
+dart_analyze_test = _dart_analyze_test
 dart_format_test = _dart_format_test
-dart_library = _dart_library
-dart_proto_library = _dart_proto_library
-flutter_analyze_test = _flutter_analyze_test
-flutter_app = _flutter_app
-flutter_build_settings = _flutter_build_settings
-flutter_goldens = _flutter_goldens
+flutter_android_app = _flutter_android_app
+flutter_application = _flutter_application
 flutter_library = _flutter_library
+flutter_plugin = _flutter_plugin
 flutter_test = _flutter_test

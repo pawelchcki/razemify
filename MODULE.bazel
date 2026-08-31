@@ -4,28 +4,69 @@ module(
     bazel_compatibility = [">=9.2.0"],
 )
 
-bazel_dep(name = "rules_rs", version = "0.0.102")
-bazel_dep(name = "llvm", version = "0.8.16")
+bazel_dep(name = "rules_rs", version = "0.0.107")
+bazel_dep(name = "llvm", version = "0.8.18")
 bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "aws-lc", version = "5.1.0.bcr.2")
 
-# These are the public dependencies of the pinned rules_flutter fork. The fork
-# itself and its patched Android SDK provider are fetched by our extension so
-# their source selection remains effective when Razemify is not the root
-# module (Bzlmod deliberately ignores overrides declared by dependencies).
-bazel_dep(name = "apple_support", version = "1.24.2")
-bazel_dep(name = "bazel_skylib", version = "1.9.0")
+# Bazel-native Flutter and Android build stack. Non-registry overrides are only
+# honored in the root module, so consumers must repeat both fork overrides (see
+# //bazel:README.md).
+bazel_dep(name = "rules_flutter", version = "0.0.0")
+bazel_dep(name = "rules_dart", version = "0.4.9")
+
+bazel_dep(name = "hermetic_android_toolchains", version = "0.0.0", dev_dependency = True)
+
+bazel_dep(name = "bazel_skylib", version = "1.9.2")
 bazel_dep(name = "protobuf", version = "34.0.bcr.1")
-bazel_dep(name = "rules_android", version = "0.7.3")
+bazel_dep(name = "rules_android", version = "0.7.2")
 bazel_dep(name = "rules_android_ndk", version = "0.1.5")
 bazel_dep(name = "rules_cc", version = "0.2.22")
-bazel_dep(name = "rules_java", version = "9.3.0")
-bazel_dep(name = "rules_shell", version = "0.6.1")
+bazel_dep(name = "rules_java", version = "9.6.1")
+bazel_dep(name = "rules_jvm_external", version = "7.0")
+bazel_dep(name = "rules_kotlin", version = "2.3.20")
+bazel_dep(name = "rules_go", version = "0.62.0")
 
-razemify_dependencies = use_extension("//bazel:repositories.bzl", "razemify_dependencies")
-use_repo(
-    razemify_dependencies,
-    "hermetic_android_toolchains",
-    "rules_flutter",
+archive_override(
+    module_name = "rules_flutter",
+    sha256 = "7e7c7bc1b12a636804227b820abceb8e3973af00ae41bfaa5e04edd6ab742b9b",
+    strip_prefix = "rules_flutter-e81074d44674a2a295452931ddb6ab654ba089fc",
+    urls = ["https://github.com/pawelchcki/rules_flutter/archive/e81074d44674a2a295452931ddb6ab654ba089fc.tar.gz"],
+)
+
+# Deterministic Dart compilation fix required by the pinned rules_flutter
+# revision until the corresponding rules_dart change is released.
+archive_override(
+    module_name = "rules_dart",
+    sha256 = "44b144bc5a4cce234160122a9f556a91c6b9a310bd262a3eacdc18625138b8ca",
+    strip_prefix = "rules_dart-6cd2d1146614a6c982e492b2e558debf6f41d450",
+    urls = ["https://github.com/aran/rules_dart/archive/6cd2d1146614a6c982e492b2e558debf6f41d450.tar.gz"],
+)
+
+# Downloaded Android SDK/NDK repositories, pinned because this module is not in
+# the BCR. This revision exposes repositories that can replace the local-only
+# repositories created by rules_android and rules_android_ndk.
+archive_override(
+    module_name = "hermetic_android_toolchains",
+    sha256 = "7fce0f58bedeed8a5e2a00a2beae49c120784c4354c238b2604bf2aedcbfaa40",
+    strip_prefix = "hermetic_android_toolchains-e723dd55401eaae04019e546e2f9bf78d0f33acf",
+    urls = ["https://github.com/keith/hermetic_android_toolchains/archive/e723dd55401eaae04019e546e2f9bf78d0f33acf.tar.gz"],
+)
+
+# hermetic_android_toolchains tracks rules_android 0.7.3, but its repository
+# replacement interface is compatible with the 0.7.2 stack pinned by the
+# rules_flutter revision used here.
+single_version_override(
+    module_name = "rules_android",
+    version = "0.7.2",
+)
+
+# rules_android_ndk 0.1.5 is not yet available from the BCR.
+archive_override(
+    module_name = "rules_android_ndk",
+    sha256 = "07e7a2777113bb3d0a432265d1c78cfaa140a5bc4c82be4c8cd988b34382ec90",
+    strip_prefix = "rules_android_ndk-0.1.5",
+    urls = ["https://github.com/bazelbuild/rules_android_ndk/releases/download/v0.1.5/rules_android_ndk-v0.1.5.tar.gz"],
 )
 
 toolchains = use_extension("@rules_rs//rs/toolchains:module_extension.bzl", "toolchains")
@@ -35,15 +76,25 @@ toolchains.toolchain(
 )
 use_repo(toolchains, "default_rust_toolchains")
 
+rules_rs_bindgen = use_extension("@rules_rs//rs:rules_rust_bindgen.bzl", "rules_rust_bindgen")
+use_repo(rules_rs_bindgen, rules_rs_bindgen = "rules_rust_bindgen")
+
 register_toolchains(
-    "@default_rust_toolchains//:all",
+    "@default_rust_toolchains//...",
     "@llvm//toolchain:all",
+    "@rules_rs_bindgen//:all",
 )
 
-# rules_rs wraps the rules_rust build rules but does not re-export its
-# rustfmt/clippy aspects, so pull the same pinned repo in directly for those.
-rules_rust = use_extension("@rules_rs//rs:rules_rust.bzl", "rules_rust")
-use_repo(rules_rust, "rules_rust")
+# rules_rs is implemented on a patched compatibility repository. Keep that
+# implementation detail behind a rules_rs-owned apparent name; Razemify's Rust
+# build rules are loaded exclusively from @rules_rs. The local patch fixes
+# response-file substitutions while rules_rs bootstraps its process wrapper.
+rules_rs_internal = use_extension("@rules_rs//rs:rules_rust.bzl", "rules_rust")
+rules_rs_internal.patch(
+    patches = ["//bazel:rules_rs_bootstrap_determinism.patch"],
+    strip = 1,
+)
+use_repo(rules_rs_internal, rules_rs_internal = "rules_rust")
 
 crate = use_extension("@rules_rs//rs:extensions.bzl", "crate")
 crate.from_cargo(
@@ -55,11 +106,7 @@ crate.from_cargo(
         "aarch64-unknown-linux-gnu",
         "aarch64-apple-darwin",
         "wasm32-unknown-unknown",
-        # Android triples are resolved so @crates targets exist for them;
-        # linking an Android cdylib still needs an NDK cc toolchain (follow-up).
         "aarch64-linux-android",
-        "armv7-linux-androideabi",
-        "i686-linux-android",
         "x86_64-linux-android",
     ],
 )
@@ -72,6 +119,37 @@ crate.annotation(
     crate = "ort-sys",
     gen_build_script = "off",
 )
+
+# rav1e's build.rs uses the `built` crate, which records the absolute compiler
+# path and may record time/parallelism. Override its informational compiler
+# fields and use the standard reproducible-build epoch.
+crate.annotation(
+    build_script_env = {
+        "BUILT_OVERRIDE_rav1e_RUSTC": "rustc",
+        "BUILT_OVERRIDE_rav1e_RUSTC_VERSION": "rustc 1.97.1",
+        "BUILT_OVERRIDE_rav1e_RUSTDOC": "rustdoc",
+        "BUILT_OVERRIDE_rav1e_RUSTDOC_VERSION": "rustdoc 1.97.1",
+        "SOURCE_DATE_EPOCH": "0",
+    },
+    crate = "rav1e",
+)
+
+# Replace aws-lc-sys's host CMake build with rules_rs's declared Bazel target.
+# Besides being hermetic, this avoids object metadata tied to the output base.
+crate.annotation(
+    crate = "aws-lc-rs",
+    gen_build_script = "off",
+)
+crate.annotation(
+    additive_build_file = "@rules_rs//3rd_party/aws-lc-sys:additive.BUILD.bazel",
+    crate = "aws-lc-sys",
+    extra_aliased_targets = {"aws_lc_sys_build_info": "aws_lc_sys_build_info"},
+    gen_build_script = "off",
+    rustc_flags = ["--cfg=use_bindgen_pregenerated"],
+    deps = ["@crates//:aws_lc_sys_build_info"],
+)
+
+inject_repo(crate, "aws-lc")
 
 # Our own wasm-bindgen CLI universe: the CLI's schema version must match the
 # wasm-bindgen crate version in //:Cargo.lock, and the toolchain bundled with
@@ -93,25 +171,26 @@ crate.annotation(
     gen_binaries = ["wasm-bindgen"],
     repositories = ["wbd"],
 )
+# rustix's compiler feature probes leave their temporary rmeta in OUT_DIR.
+# The file is not consumed, and its metadata contains the output-base path.
+crate.annotation(
+    crate = "rustix",
+    patch_args = ["-p1"],
+    patches = ["//bazel:rustix_determinism.patch"],
+    repositories = ["wbd"],
+)
 use_repo(crate, "crates", "wbd")
 
 wasm_bindgen = use_extension("@rules_rs//rs:rules_rust_wasm_bindgen.bzl", "rules_rust_wasm_bindgen")
-use_repo(wasm_bindgen, "rules_rust_wasm_bindgen")
+use_repo(wasm_bindgen, rules_rs_wasm_bindgen = "rules_rust_wasm_bindgen")
 
 # Ours first: toolchain resolution picks the first registered match.
 register_toolchains(
     "//third_party/wasm_bindgen:wasm_bindgen_toolchain",
-    "@rules_rust_wasm_bindgen//:default_wasm_bindgen_toolchain",
+    "@rules_rs_wasm_bindgen//:default_wasm_bindgen_toolchain",
 )
 
 http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-maven_repository = use_repo_rule("//third_party/android_maven:maven_repository.bzl", "maven_repository")
-
-maven_repository(
-    name = "android_maven",
-    manifest = "//third_party/android_maven:maven_manifest.json",
-)
 
 # ONNX Runtime version must match what the resolved ort-sys crate pins
 # (build/download/dist.tsv in the ort-sys sources): ort-sys 2.0.0-rc.13 -> 1.28.0.
@@ -126,7 +205,7 @@ http_archive(
 http_archive(
     name = "onnxruntime_linux_aarch64",
     build_file = "//third_party/onnxruntime:onnxruntime.BUILD",
-    sha256 = "e15ff8b5d85afe6c144d97c6fd432254bf76a219daaf17658087d6ecb3e8f0bb",
+    sha256 = "e15ff8b5d85afe6c144d7c6fd432254bf76a219daaf17658087d6ecb3e8f0bb",
     strip_prefix = "onnxruntime-linux-aarch64-1.28.0",
     url = "https://github.com/microsoft/onnxruntime/releases/download/v1.28.0/onnxruntime-linux-aarch64-1.28.0.tgz",
 )
@@ -139,85 +218,182 @@ http_archive(
     url = "https://github.com/microsoft/onnxruntime/releases/download/v1.28.0/onnxruntime-osx-arm64-1.28.0.tgz",
 )
 
-# Re-exporting the extension from Razemify gives consumers the same extension
-# identity and therefore the same Flutter providers, SDK, and pub repositories.
-flutter = use_extension("//bazel:flutter_extensions.bzl", "flutter")
-flutter.toolchain(flutter_version = "3.44.7")
+# Flutter SDK and pub dependency hubs.
+flutter = use_extension("@rules_flutter//flutter:extensions.bzl", "flutter")
+flutter.toolchain(flutter_version = "3.44.1")
 
-flutter_dev = use_extension(
-    "//bazel:flutter_extensions.bzl",
-    "flutter",
-    dev_dependency = True,
+# Use the example application's lock as the single Bazel hub. It contains the
+# plugin's full dependency closure and avoids introducing two copies of Flutter
+# SDK packages into the same application graph.
+flutter.pub(
+    name = "flutter_razemify_deps",
+    lock = "//flutter_razemify/example:pubspec.lock",
 )
-flutter_dev.android_toolchain(
-    name = "android",
-    build_tools_version = "36.0.0",
-    gradle_distribution_integrity = "sha256-1yXXB7+r1N/clYxiQAOzyArMwD9wN7USLEsdDvFc7Ks=",
-    gradle_distribution_url = "https://services.gradle.org/distributions/gradle-8.9-bin.zip",
-    ndk_version = "28.2.13676358",
-    sdk_version = "36",
+flutter.plugin_overlays(
+    roots = ["//bazel/flutter_plugin_overlays:BUILD.bazel"],
 )
-use_repo(
-    flutter_dev,
-    "android_android_ndk",
-    "android_toolchains",
-)
-
 use_repo(
     flutter,
-    "flutter_sdk",
+    "flutter_android_engine_arm64",
+    "flutter_android_engine_x64",
+    "flutter_razemify_deps",
     "flutter_toolchains",
 )
 
-register_toolchains(
-    "@flutter_toolchains//:all",
-)
+register_toolchains("@flutter_toolchains//:all")
 
-register_toolchains(
-    "@android_android_ndk//:all",
-    "@android_toolchains//:all",
+# rules_android's transitive Go SDK is too old for its current dependencies.
+go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
+go_sdk.download(version = "1.26.2")
+
+# rules_android still supplies its Bazel Android tools repository. The SDK and
+# NDK below are downloaded separately as versioned, checksummed archives.
+remote_android_extensions = use_extension(
+    "@rules_android//bzlmod_extensions:android_extensions.bzl",
+    "remote_android_tools_extensions",
+)
+use_repo(remote_android_extensions, "android_tools")
+
+android = use_extension(
+    "@hermetic_android_toolchains//:extensions.bzl",
+    "android",
+    dev_dependency = True,
+)
+android.sdk(
+    api_level = "35",
+    build_tools_version = "35.0.0",
+    version = "35",
+)
+android.ndk(version = "r28c")
+use_repo(android, "androidndk", "androidsdk")
+
+# Redirect the repositories expected internally by rules_android and
+# rules_android_ndk to the hermetic repositories above.
+rules_android_sdk = use_extension(
+    "@rules_android//rules/android_sdk_repository:rule.bzl",
+    "android_sdk_repository_extension",
     dev_dependency = True,
 )
 
-pub = use_extension("//bazel:flutter_extensions.bzl", "pub")
-pub.lock(
-    name = "flutter_razemify_deps",
-    file = "//flutter_razemify:pubspec.lock",
-)
-pub.package(
-    name = "pub_fixnum",
-    package = "fixnum",
-    version = "1.1.1",
-)
-pub.package(
-    name = "pub_meta",
-    package = "meta",
-    version = "1.15.0",
-)
-pub.package(
-    name = "pub_path",
-    package = "path",
-    version = "1.9.0",
-)
-pub.package(
-    name = "pub_protobuf",
-    package = "protobuf",
-    version = "3.1.0",
-)
-pub.package(
-    name = "pub_protoc_plugin",
-    package = "protoc_plugin",
-    version = "21.1.1",
-)
-use_repo(pub, "flutter_razemify_deps", "pub_fixnum", "pub_meta", "pub_path", "pub_protobuf", "pub_protoc_plugin")
+override_repo(rules_android_sdk, "androidsdk")
 
-pub_dev = use_extension(
-    "//bazel:flutter_extensions.bzl",
-    "pub",
+rules_android_ndk = use_extension(
+    "@rules_android_ndk//:extension.bzl",
+    "android_ndk_repository_extension",
     dev_dependency = True,
 )
-pub_dev.lock(
-    name = "flutter_razemify_example_deps",
-    file = "//flutter_razemify/example:pubspec.lock",
+
+override_repo(rules_android_ndk, "androidndk")
+
+register_toolchains(
+    "@androidndk//:all",
+    "@androidsdk//:all",
+    dev_dependency = True,
 )
-use_repo(pub_dev, "flutter_razemify_example_deps")
+
+# Root-owned Maven configuration from rules_flutter's Android e2e workspace.
+# The protobuf jars must match protobuf 34.0 gencode; activity 1.10.1 is the
+# direct Android dependency of the image_picker_android version in our lock.
+maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+maven.install(
+    name = "android_ide_common_30_1_3",
+    aar_import_bzl_label = "@rules_android//rules:rules.bzl",
+    artifacts = [
+        "com.android.tools.layoutlib:layoutlib-api:30.1.3",
+        "com.android.tools.build:manifest-merger:30.1.3",
+        "com.android.tools:common:30.1.3",
+        "com.android.tools:repository:30.1.3",
+        "com.android.tools.analytics-library:protos:30.1.3",
+        "com.android.tools.analytics-library:shared:30.1.3",
+        "com.android.tools.analytics-library:tracker:30.1.3",
+        "com.android.tools:annotations:30.1.3",
+        "com.android.tools:sdk-common:30.1.3",
+        "com.android.tools.build:builder:7.1.3",
+        "com.android.tools.build:builder-model:7.1.3",
+        "com.google.protobuf:protobuf-java:4.34.0",
+        "com.google.protobuf:protobuf-java-util:4.34.0",
+    ],
+    known_contributing_modules = ["rules_android"],
+    repositories = [
+        "https://maven.google.com",
+        "https://repo1.maven.org/maven2",
+    ],
+    use_starlark_android_rules = True,
+)
+maven.install(
+    name = "rules_android_maven",
+    aar_import_bzl_label = "@rules_android//rules:rules.bzl",
+    artifacts = [
+        "androidx.activity:activity:1.10.1",
+        "androidx.privacysandbox.tools:tools:1.0.0-alpha06",
+        "androidx.privacysandbox.tools:tools-apigenerator:1.0.0-alpha06",
+        "androidx.privacysandbox.tools:tools-apipackager:1.0.0-alpha06",
+        "androidx.test:core:1.6.0-alpha01",
+        "androidx.test.ext:junit:1.2.0-alpha01",
+        "com.android.tools.apkdeployer:apkdeployer:8.11.0-alpha10",
+        "com.android.tools.build:bundletool:1.18.2",
+        "com.android.tools:desugar_jdk_libs_minimal:2.1.5",
+        "com.android.tools:desugar_jdk_libs_configuration_minimal:2.1.5",
+        "com.android.tools:desugar_jdk_libs_nio:2.1.5",
+        "com.android.tools:desugar_jdk_libs_configuration_nio:2.1.5",
+        "com.android.tools:desugar_jdk_libs_configuration:2.1.5",
+        "com.android.tools:r8:8.9.35",
+        "org.bouncycastle:bcprov-jdk18on:1.77",
+        "org.hamcrest:hamcrest-core:2.2",
+        "org.robolectric:robolectric:4.14.1",
+        "com.google.flogger:flogger:0.8",
+        "com.google.flogger:flogger-system-backend:0.8",
+        "com.google.guava:guava:32.1.2-jre",
+        "com.google.guava:failureaccess:1.0.1",
+        "info.picocli:picocli:4.7.4",
+        "jakarta.inject:jakarta.inject-api:2.0.1",
+        "junit:junit:4.13.2",
+        "com.beust:jcommander:1.82",
+        "com.google.protobuf:protobuf-java:4.34.0",
+        "com.google.protobuf:protobuf-java-util:4.34.0",
+        "com.google.code.findbugs:jsr305:3.0.2",
+        "androidx.databinding:databinding-compiler:8.7.0",
+        "org.ow2.asm:asm:9.6",
+        "org.ow2.asm:asm-commons:9.6",
+        "org.ow2.asm:asm-tree:9.6",
+        "org.ow2.asm:asm-util:9.6",
+        "com.android:zipflinger:8.7.0",
+        "com.android.tools.build:gradle:8.7.0",
+        "com.android:signflinger:8.7.0",
+        "com.android.tools.build:aapt2-proto:8.6.1-11315950",
+        "com.android.tools.build:apksig:8.7.0",
+        "com.android.tools.build:apkzlib:8.7.0",
+        "com.google.auto.value:auto-value:1.11.0",
+        "com.google.auto.value:auto-value-annotations:1.11.0",
+        "com.google.auto:auto-common:1.2.2",
+        "com.google.auto.service:auto-service:1.1.1",
+        "com.google.auto.service:auto-service-annotations:1.1.1",
+        "com.google.errorprone:error_prone_annotations:2.33.0",
+        "com.google.errorprone:error_prone_type_annotations:2.33.0",
+        "com.google.errorprone:error_prone_check_api:2.33.0",
+        "com.google.errorprone:error_prone_core:2.33.0",
+        "com.google.guava:guava-testlib:33.2.1-jre",
+        "com.google.jimfs:jimfs:1.2",
+        "com.google.testing.compile:compile-testing:0.18",
+        "com.google.testparameterinjector:test-parameter-injector:1.16",
+        "com.google.truth:truth:1.4.0",
+        "com.google.truth.extensions:truth-java8-extension:1.4.0",
+        "com.google.truth.extensions:truth-liteproto-extension:1.4.0",
+        "com.google.truth.extensions:truth-proto-extension:1.4.0",
+        "org.mockito:mockito-core:5.4.0",
+    ],
+    known_contributing_modules = [
+        "rules_android",
+        "rules_flutter",
+    ],
+    repositories = [
+        "https://maven.google.com",
+        "https://repo1.maven.org/maven2",
+    ],
+    use_starlark_android_rules = True,
+)
+use_repo(
+    maven,
+    "android_ide_common_30_1_3",
+    "rules_android_maven",
+)

@@ -1,94 +1,51 @@
-load("@rules_flutter//flutter:defs.bzl", "flutter_app", "flutter_library", "flutter_test")
-
-# Flutter 3.44 generates Android registrants for dev-only plugins even though
-# Gradle excludes those plugins from release compilation. Give application
-# packaging a production-only pubspec; tests continue to use the real pubspec.
-genrule(
-    name = "android_pubspec",
-    srcs = ["pubspec.yaml"],
-    outs = ["pubspec.android.yaml"],
-    cmd = """
-awk '
-BEGIN { skip = 0 }
-/^[^[:space:]#]/ { skip = ($$0 ~ /^dev_dependencies:/) }
-!skip { print }
-' $(location pubspec.yaml) > $@
-""",
+load(
+    "//bazel:defs.bzl",
+    "flutter_android_app",
+    "flutter_application",
+    "flutter_test",
 )
 
-flutter_library(
-    name = "lib",
-    srcs = glob(["lib/**"]),
-    pubspec = "pubspec.yaml",
+flutter_application(
+    name = "example_flutter",
+    main = "//:lib/flutter_razemify_example_main.dart",
+    package_name = "flutter_razemify_example",
+    srcs = ["lib/main.dart"],
     deps = [
         "//flutter_razemify",
-        "@flutter_razemify_example_deps//:all",
-        "@flutter_sdk//flutter/packages/flutter",
-        "@flutter_sdk//flutter/packages/flutter_test",
-        # Dev-only, but flutter_tools resolves the whole pubspec closure from
-        # package_graph.json when building the test asset bundle, so every
-        # declared dependency must also appear in package_config.json.
-        "@flutter_sdk//flutter/packages/integration_test",
+        "@flutter_razemify_deps//:flutter",
+        "@flutter_razemify_deps//:image_picker",
+        "@rules_flutter//flutter:material_icons",
     ],
 )
 
-flutter_library(
-    name = "lib_android_debug",
-    srcs = glob(["lib/**"]),
-    pubspec = ":android_pubspec",
-    deps = [
-        "//flutter_razemify:flutter_razemify_android_debug",
-        "@flutter_razemify_example_deps//:all",
-        "@flutter_sdk//flutter/packages/flutter",
-    ],
+flutter_android_app(
+    name = "example_arm64",
+    android_abi = "arm64",
+    application = ":example_flutter",
+    app_name = "Razemify Example",
+    package_name = "com.example.flutter_razemify_example",
+    pub_hub_name = "flutter_razemify_deps",
 )
 
-flutter_library(
-    name = "lib_android_release",
-    srcs = glob(["lib/**"]),
-    pubspec = ":android_pubspec",
-    deps = [
-        "//flutter_razemify:flutter_razemify_android_release",
-        "@flutter_razemify_example_deps//:all",
-        "@flutter_sdk//flutter/packages/flutter",
-    ],
+flutter_android_app(
+    name = "example_x64",
+    android_abi = "x64",
+    application = ":example_flutter",
+    app_name = "Razemify Example",
+    package_name = "com.example.flutter_razemify_example",
+    pub_hub_name = "flutter_razemify_deps",
 )
 
-filegroup(
-    name = "android_files",
-    srcs = glob(
-        ["android/**"],
-        exclude = [
-            "android/**/build/**",
-            "android/.gradle/**",
-            "android/local.properties",
-        ],
-    ),
-)
-
-flutter_app(
-    name = "example",
-    apk = {
-        "android_maven_repo": "@android_maven//:mirror",
-        "mode": "debug",
-        "srcs": [":android_files"],
-    },
-    embed = [":lib_android_debug"],
-)
-
-flutter_app(
-    name = "example_bundle",
-    appbundle = {
-        "android_maven_repo": "@android_maven//:mirror",
-        "mode": "release",
-        "srcs": [":android_files"],
-    },
-    embed = [":lib_android_release"],
-)
-
-# integration_test/ is not Bazelified: it needs a real device or emulator.
+# integration_test/ needs a real device or emulator and remains outside Bazel.
 flutter_test(
     name = "widget_test",
-    srcs = glob(["test/**"]),
-    embed = [":lib"],
+    main = "//bazel:flutter_razemify_widget_test.dart",
+    package_name = "flutter_razemify_widget_test",
+    deps = [
+        "//flutter_razemify",
+        "@flutter_razemify_deps//:flutter",
+        "@flutter_razemify_deps//:flutter_test",
+        "@flutter_razemify_deps//:image_picker",
+        "@rules_flutter//flutter:material_icons",
+    ],
 )

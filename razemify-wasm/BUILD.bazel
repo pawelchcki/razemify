@@ -1,5 +1,5 @@
 load("@rules_rs//rs:rust_shared_library.bzl", "rust_shared_library")
-load("@rules_rust_wasm_bindgen//:defs.bzl", "rust_wasm_bindgen")
+load("@rules_rs_wasm_bindgen//:defs.bzl", "rust_wasm_bindgen")
 
 rust_shared_library(
     name = "razemify_wasm_cdylib",

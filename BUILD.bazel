@@ -1,9 +1,10 @@
-load("@rules_rust//rust:defs.bzl", "rust_clippy", "rustfmt_test")
+load("@rules_rs_internal//rust:defs.bzl", "rust_clippy", "rustfmt_test")
 
 exports_files(
     [
         "Cargo.toml",
         "Cargo.lock",
+        "lib/flutter_razemify_example_main.dart",
     ],
     visibility = ["//visibility:public"],
 )
@@ -13,18 +14,6 @@ exports_files(
 alias(
     name = "flutter_razemify",
     actual = "//flutter_razemify",
-    visibility = ["//visibility:public"],
-)
-
-alias(
-    name = "flutter_razemify_android_debug",
-    actual = "//flutter_razemify:flutter_razemify_android_debug",
-    visibility = ["//visibility:public"],
-)
-
-alias(
-    name = "flutter_razemify_android_release",
-    actual = "//flutter_razemify:flutter_razemify_android_release",
     visibility = ["//visibility:public"],
 )
 

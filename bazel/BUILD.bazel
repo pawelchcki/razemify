@@ -1,7 +1,7 @@
 exports_files([
     "README.md",
     "defs.bzl",
-    "flutter_extensions.bzl",
-    "opt_transition.bzl",
-    "repositories.bzl",
+    "flutter_razemify_widget_test.dart",
+    "rustix_determinism.patch",
+    "rules_rs_bootstrap_determinism.patch",
 ])

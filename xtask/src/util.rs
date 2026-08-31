@@ -1,11 +1,16 @@
-use std::path::PathBuf;
+use std::{env, path::PathBuf};
 
 /// Get the project root directory
 #[allow(dead_code)]
 pub fn project_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Failed to get project root")
+    let start = env::var_os("BUILD_WORKSPACE_DIRECTORY")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| env::current_dir().expect("Failed to get current directory"));
+
+    start
+        .ancestors()
+        .find(|path| path.join("Cargo.toml").is_file() && path.join("xtask").is_dir())
+        .expect("Run xtask from the Razemify workspace")
         .to_path_buf()
 }
 

@@ -1,0 +1,64 @@
+diff --git a/util/process_wrapper/private/bootstrap_process_wrapper.cc b/util/process_wrapper/private/bootstrap_process_wrapper.cc
+--- a/util/process_wrapper/private/bootstrap_process_wrapper.cc
++++ b/util/process_wrapper/private/bootstrap_process_wrapper.cc
+@@ -1,6 +1,7 @@
+ #include <cerrno>
+ #include <cstdlib>
+ #include <cstdio>
+ #include <cstring>
++#include <fstream>
+ #include <string>
+ #include <vector>
+@@ -138 +139,40 @@ bool replace_environment_placeholders(const char* name,
++bool expand_response_file(std::string* arg,
++                          const std::string& pwd,
++                          const std::string& output_base,
++                          const std::string& exec_root) {
++  if (arg->empty() || arg->front() != '@') {
++    return true;
++  }
++
++  const std::string input_path = arg->substr(1);
++  const std::string output_path = input_path + ".expanded";
++  std::ifstream input(input_path);
++  if (!input) {
++    std::fprintf(stderr,
++                 "bootstrap_process_wrapper: cannot read response file %s\n",
++                 input_path.c_str());
++    return false;
++  }
++  std::ofstream output(output_path, std::ios::trunc);
++  if (!output) {
++    std::fprintf(stderr,
++                 "bootstrap_process_wrapper: cannot write response file %s\n",
++                 output_path.c_str());
++    return false;
++  }
++
++  std::string line;
++  while (std::getline(input, line)) {
++    output << replace_placeholders(line, pwd, output_base, exec_root) << '\n';
++  }
++  if (!input.eof() || !output) {
++    std::fprintf(stderr,
++                 "bootstrap_process_wrapper: failed expanding response file %s\n",
++                 input_path.c_str());
++    return false;
++  }
++  *arg = "@" + output_path;
++  return true;
++}
++
+ }  // namespace
+@@ -132,6 +172,9 @@ int main(int argc, char** argv) {
+   std::vector<std::string> command_args;
+   command_args.reserve(static_cast<size_t>(argc - first_arg_index));
+   for (int i = first_arg_index; i < argc; ++i) {
+-    command_args.push_back(
+-        replace_placeholders(argv[i], pwd, output_base, exec_root));
++    std::string arg = replace_placeholders(argv[i], pwd, output_base, exec_root);
++    if (!expand_response_file(&arg, pwd, output_base, exec_root)) {
++      return 1;
++    }
++    command_args.push_back(arg);
+   }

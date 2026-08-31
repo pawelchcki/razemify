@@ -37,27 +37,42 @@ jobs:
           flush-timeout-seconds: '300'
           fail-job-on-cache-error: 'false'
 
-      # `bazel test //...` builds every matched non-test target (including
-      # //:clippy) and runs all test targets in one analysis pass. Pull requests
-      # still build the debug APK but reserve the release app bundle for main.
+      # `bazel test //...` covers all non-manual targets and quality gates. The
+      # Android application macros are tagged manual and built explicitly below.
       - name: Build and test everything
-        env:
-          EVENT_NAME: ${{ github.event_name }}
         run: |
-          targets=(//...)
-          if [[ "$EVENT_NAME" == "pull_request" ]]; then
-            # flutter_app expands to a public wrapper and a generated
-            # platform target; exclude both on pull requests.
-            targets+=(
-              -//flutter_razemify/example:example_bundle
-              -//flutter_razemify/example:example_bundle.appbundle
-            )
-          fi
           bazel \
             --bazelrc="${{ steps.bazel-cache.outputs.bazelrc }}" \
             test \
             --remote_download_toplevel \
-            -- "${targets[@]}"
+            //...
+
+      - name: Build and inspect Android APKs
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          mode=opt
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            mode=dbg
+          fi
+
+          bazel \
+            --bazelrc="${{ steps.bazel-cache.outputs.bazelrc }}" \
+            build \
+            --remote_download_toplevel \
+            -c "$mode" \
+            //flutter_razemify/example:example_arm64 \
+            //flutter_razemify/example:example_x64
+
+          verify_apk() {
+            local apk="$1"
+            local abi="$2"
+            unzip -Z1 "$apk" | grep -Fx "lib/$abi/libflutter_razemify.so"
+            unzip -Z1 "$apk" | grep -Fx "assets/flutter_assets/AssetManifest.bin"
+          }
+
+          verify_apk bazel-bin/flutter_razemify/example/example_arm64.apk arm64-v8a
+          verify_apk bazel-bin/flutter_razemify/example/example_x64.apk x86_64
 
       # xtask's deployment path invokes wasm-pack directly; keep that release
       # packaging and wasm-opt configuration covered in addition to Bazel's
