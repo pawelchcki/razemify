@@ -1,0 +1,19 @@
+diff --git a/build.rs b/build.rs
+--- a/build.rs
++++ b/build.rs
+@@ -257,9 +257,9 @@ fn can_compile<T: AsRef<str>>(test: T) -> bool {
+     let out_dir = var("OUT_DIR").unwrap();
+     let out_file = PathBuf::from(out_dir).join("rustix_test_can_compile");
+     cmd.arg("--crate-type=rlib") // Don't require `main`.
+         .arg("--emit=metadata") // Do as little as possible but still parse.
+         .arg("--target")
+         .arg(target)
+         .arg("-o")
+-        .arg(out_file)
++        .arg(&out_file)
+         .stdout(Stdio::null()); // We don't care about the output (only whether it builds or not)
+@@ -285 +285,3 @@ fn can_compile<T: AsRef<str>>(test: T) -> bool {
+-    child.wait().unwrap().success()
++    let success = child.wait().unwrap().success();
++    let _ = std::fs::remove_file(out_file);
++    success

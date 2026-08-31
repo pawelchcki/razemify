@@ -30,6 +30,9 @@ downloads/
 eggs/
 .eggs/
 lib/
+!lib/
+lib/*
+!lib/flutter_razemify_example_main.dart
 lib64/
 parts/
 sdist/

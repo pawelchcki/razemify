@@ -1,5 +1,0 @@
-exports_files([
-    "capture_manifest.sh",
-    "maven_manifest.json",
-    "maven_repository.bzl",
-])

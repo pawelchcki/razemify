@@ -1,69 +1,39 @@
-load("@rules_flutter//flutter:defs.bzl", "dart_format_test", "flutter_analyze_test", "flutter_library")
-
-_ANDROID_SRCS = glob(
-    [
-        "android/**",
-        "lib/**",
-    ],
-    exclude = [
-        "android/**/.cxx/**",
-        "android/**/build/**",
-        "android/**/jniLibs/**",
-        "android/.gradle/**",
-        "android/captures/**",
-        "android/local.properties",
-    ],
+load(
+    "//bazel:defs.bzl",
+    "dart_analysis_options",
+    "dart_analyze_test",
+    "dart_format_test",
+    "flutter_plugin",
 )
 
-flutter_library(
+flutter_plugin(
     name = "flutter_razemify",
-    srcs = glob(["lib/**"]),
-    pubspec = "pubspec.yaml",
+    srcs = glob(["lib/**/*.dart"]),
+    package_name = "flutter_razemify",
+    platforms = ["android"],
     visibility = ["//visibility:public"],
     deps = [
-        "@flutter_razemify_deps//:all",
-        "@flutter_sdk//flutter/packages/flutter",
+        "@flutter_razemify_deps//:ffi",
+        "@flutter_razemify_deps//:flutter",
+        "@flutter_razemify_deps//:image",
     ],
+    native_deps = ["//flutter_razemify/rust:flutter_razemify_shared"],
 )
 
-flutter_library(
-    name = "flutter_razemify_android_debug",
-    srcs = _ANDROID_SRCS,
-    generated_srcs = {
-        "//flutter_razemify/rust:flutter_razemify_arm64_v8a": "android/src/main/jniLibs/arm64-v8a",
-    },
-    pubspec = "pubspec.yaml",
-    visibility = ["//visibility:public"],
-    deps = [
-        "@flutter_razemify_deps//:all",
-        "@flutter_sdk//flutter/packages/flutter",
-    ],
+dart_analysis_options(
+    name = "analysis_options",
+    src = "analysis_options.yaml",
+    deps = ["@flutter_razemify_deps//:flutter_lints"],
 )
 
-flutter_library(
-    name = "flutter_razemify_android_release",
-    srcs = _ANDROID_SRCS,
-    generated_srcs = {
-        "//flutter_razemify/rust:flutter_razemify_arm64_v8a_opt": "android/src/main/jniLibs/arm64-v8a",
-        "//flutter_razemify/rust:flutter_razemify_armeabi_v7a_opt": "android/src/main/jniLibs/armeabi-v7a",
-        "//flutter_razemify/rust:flutter_razemify_x86_64_opt": "android/src/main/jniLibs/x86_64",
-        "//flutter_razemify/rust:flutter_razemify_x86_opt": "android/src/main/jniLibs/x86",
-    },
-    pubspec = "pubspec.yaml",
-    visibility = ["//visibility:public"],
-    deps = [
-        "@flutter_razemify_deps//:all",
-        "@flutter_sdk//flutter/packages/flutter",
-    ],
-)
-
-flutter_analyze_test(
+dart_analyze_test(
     name = "analyze",
-    srcs = ["analysis_options.yaml"],
-    embed = [":flutter_razemify"],
+    options = ":analysis_options",
+    target = ":flutter_razemify",
 )
 
 dart_format_test(
     name = "format",
-    srcs = glob(["lib/**/*.dart"]),
+    options = ":analysis_options",
+    target = ":flutter_razemify",
 )
