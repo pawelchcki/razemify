@@ -30,11 +30,11 @@ jobs:
           COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           if [ -n "$BUILDBUDDY_API_KEY" ]; then
-            cat >> "$GITHUB_WORKSPACE/user.bazelrc" <<EOF
-build --config=ci
-build --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}
-build --build_metadata=COMMIT_SHA=${COMMIT_SHA}
-EOF
+            printf "%s\n" \
+              "build --config=ci" \
+              "build --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}" \
+              "build --build_metadata=COMMIT_SHA=${COMMIT_SHA}" \
+              >> "$GITHUB_WORKSPACE/user.bazelrc"
           fi
 
       # `bazel test //...` covers all non-manual targets and quality gates. The
