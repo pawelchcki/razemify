@@ -164,17 +164,16 @@ fn resolve_palette(
     colors_str: &Option<String>,
 ) -> Result<Option<ColorPalette>, Box<dyn std::error::Error>> {
     if let Some(ref name) = palette_name {
-        match named_palette(name) {
-            Some(p) => return Ok(Some(p)),
-            None => {
-                return Err(format!(
+        return named_palette(name)
+            .map(Some)
+            .ok_or_else(|| {
+                format!(
                     "Unknown palette '{}'. Available: {}",
                     name,
                     all_palette_names().join(", ")
                 )
-                .into())
-            }
-        }
+                .into()
+            });
     }
 
     if let Some(ref colors) = colors_str {
@@ -216,25 +215,24 @@ fn resolve_model_type(model_type_arg: &Option<String>, model_path: Option<&Path>
 }
 
 fn load_model_or_warn(model_arg: Option<&Path>, model_type: ModelType) -> Option<RembgModel> {
-    let model_path = find_model_path(model_arg, model_type);
-    match model_path {
-        Some(path) => {
-            let detected_type = ModelType::from_path(&path).unwrap_or(model_type);
-            eprintln!("Loading {:?} model from: {}", detected_type, path.display());
-            match RembgModel::load(&path, detected_type) {
-                Ok(model) => {
-                    eprintln!("Model loaded successfully");
-                    Some(model)
-                }
-                Err(e) => {
-                    eprintln!("Warning: Failed to load model: {}. Will use existing alpha or opaque fallback.", e);
-                    None
-                }
-            }
-        }
+    let path = match find_model_path(model_arg, model_type) {
+        Some(path) => path,
         None => {
             eprintln!("Warning: No model found for {:?}. Will use existing alpha channel or opaque fallback.", model_type);
             eprintln!("  Set RAZEMIFY_MODEL_PATH or use --model/--model-type flags.");
+            return None;
+        }
+    };
+
+    let detected_type = ModelType::from_path(&path).unwrap_or(model_type);
+    eprintln!("Loading {:?} model from: {}", detected_type, path.display());
+    match RembgModel::load(&path, detected_type) {
+        Ok(model) => {
+            eprintln!("Model loaded successfully");
+            Some(model)
+        }
+        Err(e) => {
+            eprintln!("Warning: Failed to load model: {}. Will use existing alpha or opaque fallback.", e);
             None
         }
     }
@@ -270,6 +268,115 @@ fn cmd_single(
     Ok(())
 }
 
+fn is_image_up_to_date(source: &Path, target: &Path) -> bool {
+    let check = || -> std::io::Result<bool> {
+        let src_time = source.metadata()?.modified()?;
+        let dst_time = target.metadata()?.modified()?;
+        Ok(dst_time > src_time)
+    };
+    target.exists() && check().unwrap_or(false)
+}
+
+type PresetWork = Vec<(PathBuf, String, AlgorithmParams)>;
+
+fn build_image_work(
+    images: &[PathBuf],
+    output_dir: &Path,
+    presets: &[(String, AlgorithmParams)],
+    force: bool,
+) -> (Vec<(PathBuf, PresetWork)>, usize) {
+    let mut image_work = Vec::new();
+    let mut pre_skipped = 0usize;
+
+    for image_path in images {
+        let Some(stem) = image_path.file_stem().and_then(|s| s.to_str()) else {
+            continue;
+        };
+
+        let pending: PresetWork = presets
+            .iter()
+            .filter_map(|(preset_name, params)| {
+                let output_path = output_dir.join(format!("{}_{}.png", stem, preset_name));
+                if !force && is_image_up_to_date(image_path, &output_path) {
+                    return None;
+                }
+                Some((output_path, preset_name.clone(), params.clone()))
+            })
+            .collect();
+
+        pre_skipped += presets.len() - pending.len();
+        if !pending.is_empty() {
+            image_work.push((image_path.clone(), pending));
+        }
+    }
+
+    image_work.sort_by_key(|work| std::cmp::Reverse(work.1.len()));
+    (image_work, pre_skipped)
+}
+
+fn apply_preset_to_image(
+    image: &image::DynamicImage,
+    alpha: &[u8],
+    output_path: &Path,
+    preset_name: &str,
+    params: &AlgorithmParams,
+    image_path: &Path,
+) -> Result<(), String> {
+    eprintln!("  Applying [{}] -> {}", preset_name, output_path.display());
+    params
+        .process(image, alpha)
+        .map_err(|e| format!("{} [{}]: {}", image_path.display(), preset_name, e))?
+        .save(output_path)
+        .map_err(|e| format!("{} [{}]: save failed: {}", image_path.display(), preset_name, e))?;
+    eprintln!("  Done: {}", output_path.display());
+    Ok(())
+}
+
+fn process_image_presets(
+    image_path: &Path,
+    pending_presets: &[(PathBuf, String, AlgorithmParams)],
+    model: Option<&RembgModel>,
+    all_errors: &mut Vec<String>,
+) -> usize {
+    eprintln!(
+        "\nLoading & removing background: {} ({} presets to apply)",
+        image_path.display(),
+        pending_presets.len()
+    );
+
+    let img = match image::open(image_path) {
+        Ok(img) => apply_exif_orientation(img, image_path),
+        Err(e) => {
+            let msg = format!("{}: failed to load: {}", image_path.display(), e);
+            eprintln!("Error: {}", msg);
+            all_errors.push(msg);
+            return 0;
+        }
+    };
+
+    let alpha = match extract_alpha(&img, model) {
+        Ok(a) => Arc::new(a),
+        Err(e) => {
+            let msg = format!("{}: background removal failed: {}", image_path.display(), e);
+            eprintln!("Error: {}", msg);
+            all_errors.push(msg);
+            return 0;
+        }
+    };
+
+    let img_ref = &img;
+    let errors: Vec<String> = pending_presets
+        .par_iter()
+        .filter_map(|(out_path, preset_name, params)| {
+            apply_preset_to_image(img_ref, &alpha, out_path, preset_name, params, image_path).err()
+        })
+        .collect();
+
+    let processed = pending_presets.len() - errors.len();
+    all_errors.extend(errors);
+    processed
+}
+
 fn cmd_batch(
     input_dir: &Path,
     output_dir: &Path,
@@ -297,13 +404,9 @@ fn cmd_batch(
         presets.len()
     );
 
-    // Create output directory
     std::fs::create_dir_all(output_dir)?;
-
-    // Load model once
     let model = load_model_or_warn(model_path, model_type);
 
-    // Configure thread pool
     if let Some(n) = jobs {
         rayon::ThreadPoolBuilder::new()
             .num_threads(n)
@@ -311,53 +414,7 @@ fn cmd_batch(
             .ok();
     }
 
-    let presets = Arc::new(presets);
-    let mut total_processed = 0usize;
-    let mut all_errors: Vec<String> = Vec::new();
-
-    // Pre-compute pending work per image and sort: most pending first
-    type PresetWork = Vec<(PathBuf, String, AlgorithmParams)>;
-    let mut image_work: Vec<(PathBuf, PresetWork)> = Vec::new();
-    let mut pre_skipped = 0usize;
-
-    for image_path in &images {
-        let stem = image_path.file_stem().unwrap().to_str().unwrap();
-
-        let pending: Vec<(PathBuf, String, AlgorithmParams)> = presets
-            .iter()
-            .filter_map(|(preset_name, params)| {
-                let output_path = output_dir.join(format!("{}_{}.png", stem, preset_name));
-
-                if !force && output_path.exists() {
-                    if let (Ok(in_meta), Ok(out_meta)) =
-                        (image_path.metadata(), output_path.metadata())
-                    {
-                        if let (Ok(in_time), Ok(out_time)) =
-                            (in_meta.modified(), out_meta.modified())
-                        {
-                            if out_time > in_time {
-                                return None;
-                            }
-                        }
-                    }
-                }
-
-                Some((output_path, preset_name.clone(), params.clone()))
-            })
-            .collect();
-
-        pre_skipped += presets.len() - pending.len();
-
-        if !pending.is_empty() {
-            image_work.push((image_path.clone(), pending));
-        }
-    }
-
-    // Sort: images with most pending presets first (new images before partially done ones)
-    image_work.sort_by_key(|work| std::cmp::Reverse(work.1.len()));
-
-    let total_skipped = pre_skipped;
-
+    let (image_work, total_skipped) = build_image_work(&images, output_dir, &presets, force);
     let total_pending: usize = image_work.iter().map(|(_, p)| p.len()).sum();
     eprintln!(
         "To process: {} images ({} outputs), skipping {} up-to-date",
@@ -366,69 +423,16 @@ fn cmd_batch(
         total_skipped
     );
 
-    // Process each image: remove background once, then apply all presets
+    let mut total_processed = 0usize;
+    let mut all_errors = Vec::new();
+
     for (image_path, pending_presets) in &image_work {
-        // Load image and remove background once
-        eprintln!(
-            "\nLoading & removing background: {} ({} presets to apply)",
-            image_path.display(),
-            pending_presets.len()
+        total_processed += process_image_presets(
+            image_path,
+            pending_presets,
+            model.as_ref(),
+            &mut all_errors,
         );
-
-        let img = match image::open(image_path) {
-            Ok(img) => apply_exif_orientation(img, image_path),
-            Err(e) => {
-                let msg = format!("{}: failed to load: {}", image_path.display(), e);
-                eprintln!("Error: {}", msg);
-                all_errors.push(msg);
-                continue;
-            }
-        };
-
-        let alpha = match extract_alpha(&img, model.as_ref()) {
-            Ok(a) => Arc::new(a),
-            Err(e) => {
-                let msg = format!("{}: background removal failed: {}", image_path.display(), e);
-                eprintln!("Error: {}", msg);
-                all_errors.push(msg);
-                continue;
-            }
-        };
-
-        // Apply all presets in parallel, reusing the same image + alpha
-        let img_ref = &img;
-        let errors: Vec<_> = pending_presets
-            .par_iter()
-            .filter_map(|(output_path, preset_name, params)| {
-                eprintln!("  Applying [{}] -> {}", preset_name, output_path.display());
-                match params.process(img_ref, &alpha) {
-                    Ok(result) => match result.save(output_path) {
-                        Ok(()) => {
-                            eprintln!("  Done: {}", output_path.display());
-                            None
-                        }
-                        Err(e) => {
-                            let msg = format!(
-                                "{} [{}]: save failed: {}",
-                                image_path.display(),
-                                preset_name,
-                                e
-                            );
-                            eprintln!("  Error: {}", msg);
-                            Some(msg)
-                        }
-                    },
-                    Err(e) => {
-                        let msg = format!("{} [{}]: {}", image_path.display(), preset_name, e);
-                        eprintln!("  Error: {}", msg);
-                        Some(msg)
-                    }
-                }
-            })
-            .collect();
-
-        total_processed += pending_presets.len() - errors.len();
-        all_errors.extend(errors);
     }
 
     eprintln!(
@@ -437,13 +441,31 @@ fn cmd_batch(
         total_skipped,
         all_errors.len()
     );
-    if !all_errors.is_empty() {
-        for e in &all_errors {
-            eprintln!("  {}", e);
-        }
+    for e in &all_errors {
+        eprintln!("  {}", e);
     }
 
     Ok(())
+}
+
+fn compare_pixels(
+    pa: &[u8; 3],
+    pb: &[u8; 3],
+    sum_abs: &mut [u64; 3],
+    max_err: &mut [u32; 3],
+) -> ([u8; 3], bool) {
+    let mut diff_rgb = [0u8; 3];
+    let mut exact = true;
+    for c in 0..3 {
+        let diff = (pa[c] as i32 - pb[c] as i32).unsigned_abs();
+        if diff > 0 {
+            exact = false;
+        }
+        sum_abs[c] += diff as u64;
+        max_err[c] = max_err[c].max(diff);
+        diff_rgb[c] = (diff * 4).min(255) as u8;
+    }
+    (diff_rgb, exact)
 }
 
 fn cmd_compare(
@@ -476,35 +498,16 @@ fn cmd_compare(
     let mut sum_abs_error = [0u64; 3];
     let mut max_error = [0u32; 3];
 
-    let mut diff_img = if diff_output.is_some() {
-        Some(RgbImage::new(width, height))
-    } else {
-        None
-    };
+    let mut diff_img = diff_output.map(|_| RgbImage::new(width, height));
 
-    for y in 0..height {
-        for x in 0..width {
-            let pa = rgb_a.get_pixel(x, y);
-            let pb = rgb_b.get_pixel(x, y);
-
-            let mut pixel_match = true;
-            for c in 0..3 {
-                let diff = (pa[c] as i32 - pb[c] as i32).unsigned_abs();
-                if diff > 0 {
-                    pixel_match = false;
-                }
-                sum_abs_error[c] += diff as u64;
-                max_error[c] = max_error[c].max(diff);
-
-                if let Some(ref mut img) = diff_img {
-                    let vis = (diff * 4).min(255) as u8;
-                    img.get_pixel_mut(x, y)[c] = vis;
-                }
-            }
-
-            if pixel_match {
-                exact_matches += 1;
-            }
+    for (x, y, pa) in rgb_a.enumerate_pixels() {
+        let pb = rgb_b.get_pixel(x, y);
+        let (diff_rgb, exact) = compare_pixels(&pa.0, &pb.0, &mut sum_abs_error, &mut max_error);
+        if exact {
+            exact_matches += 1;
+        }
+        if let Some(ref mut img) = diff_img {
+            img.put_pixel(x, y, image::Rgb(diff_rgb));
         }
     }
 
@@ -539,6 +542,83 @@ fn cmd_compare(
     Ok(())
 }
 
+fn resolve_single_params(
+    preset: Option<&str>,
+    thresh_low: u8,
+    thresh_high: u8,
+    clip_limit: f64,
+    tile_size: u32,
+    palette: Option<ColorPalette>,
+) -> Result<(String, AlgorithmParams), Box<dyn std::error::Error>> {
+    let (name, params) = match preset {
+        Some(name) => {
+            let p = AlgorithmParams::from_preset(name)
+                .ok_or_else(|| format!("Unknown preset: {}", name))?;
+            (name.to_string(), p)
+        }
+        None => (
+            "detailed_strong".to_string(),
+            AlgorithmParams::Detailed(DetailedParams {
+                thresh_low,
+                thresh_high,
+                clip_limit,
+                tile_size,
+                palette: PALETTE_ORIGINAL,
+            }),
+        ),
+    };
+
+    let params = match palette {
+        Some(pal) => params.with_palette(pal),
+        None => params,
+    };
+
+    Ok((name, params))
+}
+
+fn build_batch_presets(
+    preset: Option<&str>,
+    all_palettes: bool,
+    palette_name: Option<&str>,
+    custom_palette: Option<ColorPalette>,
+) -> Result<Vec<(String, AlgorithmParams)>, Box<dyn std::error::Error>> {
+    let base_presets: Vec<(String, AlgorithmParams)> = match preset {
+        Some(name) => {
+            let p = AlgorithmParams::from_preset(name)
+                .ok_or_else(|| format!("Unknown preset: {}", name))?;
+            vec![(name.to_string(), p)]
+        }
+        None => AlgorithmParams::all_presets()
+            .into_iter()
+            .map(|(n, p)| (n.to_string(), p))
+            .collect(),
+    };
+
+    if all_palettes {
+        let mut result = Vec::with_capacity(base_presets.len() * all_palette_names().len());
+        for (base_name, base_params) in &base_presets {
+            for &pname in all_palette_names() {
+                let pal = named_palette(pname).unwrap();
+                result.push((
+                    format!("{}_{}", base_name, pname),
+                    base_params.clone().with_palette(pal),
+                ));
+            }
+        }
+        return Ok(result);
+    }
+
+    if let Some(pal) = custom_palette {
+        let palette_label = palette_name.unwrap_or("custom");
+        return Ok(base_presets
+            .into_iter()
+            .map(|(name, p)| (format!("{}_{}", name, palette_label), p.with_palette(pal)))
+            .collect());
+    }
+
+    Ok(base_presets)
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
@@ -558,36 +638,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } => {
             let mt = resolve_model_type(&model_type, model.as_deref());
             let resolved_palette = resolve_palette(&palette, &colors)?;
-
-            let (preset_name, params) = if let Some(ref name) = preset {
-                let p = AlgorithmParams::from_preset(name)
-                    .ok_or_else(|| format!("Unknown preset: {}", name))?;
-                (name.as_str(), p)
-            } else {
-                (
-                    "detailed_strong",
-                    AlgorithmParams::Detailed(DetailedParams {
-                        thresh_low,
-                        thresh_high,
-                        clip_limit,
-                        tile_size,
-                        palette: PALETTE_ORIGINAL,
-                    }),
-                )
-            };
-
-            let params = if let Some(pal) = resolved_palette {
-                params.with_palette(pal)
-            } else {
-                params
-            };
-
-            let preset_name_owned = preset_name.to_string();
+            let (preset_name, params) = resolve_single_params(
+                preset.as_deref(),
+                thresh_low,
+                thresh_high,
+                clip_limit,
+                tile_size,
+                resolved_palette,
+            )?;
             cmd_single(
                 &input,
                 output.as_deref(),
                 params,
-                &preset_name_owned,
+                &preset_name,
                 model.as_deref(),
                 mt,
             )?;
@@ -607,47 +670,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } => {
             let output = output_dir.unwrap_or_else(|| input_dir.join("output_rs"));
             let mt = resolve_model_type(&model_type, model.as_deref());
-
             let resolved_palette = resolve_palette(&palette, &colors)?;
-
-            // Build base presets (processing params without palette)
-            let base_presets: Vec<(&str, AlgorithmParams)> = if let Some(ref name) = preset {
-                let p = AlgorithmParams::from_preset(name)
-                    .ok_or_else(|| format!("Unknown preset: {}", name))?;
-                vec![(leak_str(name.clone()), p)]
-            } else {
-                AlgorithmParams::all_presets()
-            };
-
-            // Build final presets with palette variations
-            let presets: Vec<(String, AlgorithmParams)> = if all_palettes {
-                // Cross-product: each base preset x each palette
-                let mut result = Vec::new();
-                for (base_name, base_params) in &base_presets {
-                    for &pname in all_palette_names() {
-                        let pal = named_palette(pname).unwrap();
-                        let name = format!("{}_{}", base_name, pname);
-                        result.push((name, base_params.clone().with_palette(pal)));
-                    }
-                }
-                result
-            } else if let Some(pal) = resolved_palette {
-                // Single palette override
-                let palette_label = palette.as_deref().unwrap_or("custom");
-                base_presets
-                    .into_iter()
-                    .map(|(name, p)| {
-                        let full_name = format!("{}_{}", name, palette_label);
-                        (full_name, p.with_palette(pal))
-                    })
-                    .collect()
-            } else {
-                // Default: original palette
-                base_presets
-                    .into_iter()
-                    .map(|(name, p)| (name.to_string(), p))
-                    .collect()
-            };
+            let presets = build_batch_presets(
+                preset.as_deref(),
+                all_palettes,
+                palette.as_deref(),
+                resolved_palette,
+            )?;
 
             cmd_batch(
                 &input_dir,
@@ -670,9 +699,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
-}
-
-/// Leak a String to get a &'static str. Used for preset names in batch mode.
-fn leak_str(s: String) -> &'static str {
-    Box::leak(s.into_boxed_str())
 }

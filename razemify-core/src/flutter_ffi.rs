@@ -35,49 +35,42 @@ pub unsafe extern "C" fn razemify_process_bytes(
     palette_name: *const c_char,
 ) -> i32 {
     // Parse preset name
-    let preset_str = match unsafe { CStr::from_ptr(preset_name) }.to_str() {
-        Ok(s) => s,
-        Err(_) => return ERROR_INVALID_PRESET_ENCODING, // Invalid preset name encoding
+    let Ok(preset_str) = (unsafe { CStr::from_ptr(preset_name) }).to_str() else {
+        return ERROR_INVALID_PRESET_ENCODING;
     };
 
     // Parse palette name
-    let palette_str = match unsafe { CStr::from_ptr(palette_name) }.to_str() {
-        Ok(s) => s,
-        Err(_) => return ERROR_INVALID_PALETTE_ENCODING, // Invalid palette name encoding
+    let Ok(palette_str) = (unsafe { CStr::from_ptr(palette_name) }).to_str() else {
+        return ERROR_INVALID_PALETTE_ENCODING;
     };
 
     // Load image from bytes
     let input_slice = unsafe { std::slice::from_raw_parts(input_data, input_len) };
-    let img = match image::load_from_memory(input_slice) {
-        Ok(img) => img,
-        Err(_) => return ERROR_IMAGE_DECODE_FAILED, // Failed to decode image
+    let Ok(img) = image::load_from_memory(input_slice) else {
+        return ERROR_IMAGE_DECODE_FAILED;
     };
 
     // Apply EXIF orientation correction
     let img = apply_exif_orientation_from_bytes(img, input_slice);
-
     let (width, height) = img.dimensions();
 
     // Extract alpha channel
     let alpha = extract_alpha_from_image(&img);
 
     // Get preset parameters
-    let mut params = match AlgorithmParams::from_preset(preset_str) {
-        Some(p) => p,
-        None => return ERROR_UNKNOWN_PRESET, // Unknown preset
+    let Some(params) = AlgorithmParams::from_preset(preset_str) else {
+        return ERROR_UNKNOWN_PRESET;
     };
 
     // Apply palette
-    if let Some(palette) = named_palette(palette_str) {
-        params = params.with_palette(palette);
-    } else {
-        return ERROR_UNKNOWN_PALETTE; // Unknown palette
-    }
+    let Some(palette) = named_palette(palette_str) else {
+        return ERROR_UNKNOWN_PALETTE;
+    };
+    let params = params.with_palette(palette);
 
     // Process image
-    let result = match params.process(&img, &alpha) {
-        Ok(rgb_img) => rgb_img,
-        Err(_) => return ERROR_PROCESSING_FAILED, // Processing failed
+    let Ok(result) = params.process(&img, &alpha) else {
+        return ERROR_PROCESSING_FAILED;
     };
 
     // Copy RGB data to output buffer
@@ -131,6 +124,11 @@ pub unsafe extern "C" fn razemify_get_output_size(
     0 // Success
 }
 
+fn str_slice_to_c_char(slice: &[&str]) -> *const c_char {
+    let json = serde_json::to_string(slice).unwrap_or_else(|_| "[]".to_string());
+    CString::new(json).map_or(std::ptr::null(), |s| s.into_raw() as *const c_char)
+}
+
 /// Get JSON array of available presets.
 /// Returns a null-terminated string that must be freed with razemify_free_string.
 #[no_mangle]
@@ -139,24 +137,15 @@ pub extern "C" fn razemify_list_presets() -> *const c_char {
         .iter()
         .map(|(name, _)| *name)
         .collect();
-
-    let json = serde_json::to_string(&presets).unwrap_or_else(|_| "[]".to_string());
-    match CString::new(json) {
-        Ok(s) => s.into_raw(),
-        Err(_) => std::ptr::null(),
-    }
+    str_slice_to_c_char(&presets)
 }
 
 /// Get JSON array of available palettes.
 /// Returns a null-terminated string that must be freed with razemify_free_string.
 #[no_mangle]
 pub extern "C" fn razemify_list_palettes() -> *const c_char {
-    let palettes: Vec<&str> = crate::posterize::all_palette_names().to_vec();
-    let json = serde_json::to_string(&palettes).unwrap_or_else(|_| "[]".to_string());
-    match CString::new(json) {
-        Ok(s) => s.into_raw(),
-        Err(_) => std::ptr::null(),
-    }
+    let palettes = crate::posterize::all_palette_names();
+    str_slice_to_c_char(palettes)
 }
 
 /// Free string returned by list functions.
