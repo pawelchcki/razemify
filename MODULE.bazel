@@ -4,7 +4,7 @@ module(
     bazel_compatibility = [">=9.2.0"],
 )
 
-bazel_dep(name = "rules_rs", version = "0.0.107")
+bazel_dep(name = "rules_rs", version = "0.0.109")
 bazel_dep(name = "llvm", version = "0.8.18")
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "aws-lc", version = "5.1.0.bcr.2")

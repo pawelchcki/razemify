@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
   bazel:
@@ -25,27 +24,24 @@ jobs:
           sudo mv "$RUNNER_TEMP/bazel" /usr/local/bin/bazel
           bazel version
 
-      # The adapter is read-only on pull requests and read-write only on
-      # protected default-branch pushes. Cache failures remain non-fatal.
-      - name: Start Bazel cache adapter
-        id: bazel-cache
-        uses: thii/bazel-gha-remote-cache@6794727832d09a0a98c6edbbd013a10ddac2925a
-        with:
-          storage-mode: pack
-          namespace: razemify-bazel-v1
-          mode: auto
-          flush-timeout-seconds: '300'
-          fail-job-on-cache-error: 'false'
+      - name: Configure BuildBuddy
+        env:
+          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [ -n "$BUILDBUDDY_API_KEY" ]; then
+            cat >> "$GITHUB_WORKSPACE/user.bazelrc" <<EOF
+build --config=ci
+build --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}
+build --build_metadata=COMMIT_SHA=${COMMIT_SHA}
+EOF
+          fi
 
       # `bazel test //...` covers all non-manual targets and quality gates. The
       # Android application macros are tagged manual and built explicitly below.
       - name: Build and test everything
         run: |
-          bazel \
-            --bazelrc="${{ steps.bazel-cache.outputs.bazelrc }}" \
-            test \
-            --remote_download_toplevel \
-            //...
+          bazel test //...
 
       - name: Build and inspect Android APKs
         env:
@@ -56,10 +52,7 @@ jobs:
             mode=dbg
           fi
 
-          bazel \
-            --bazelrc="${{ steps.bazel-cache.outputs.bazelrc }}" \
-            build \
-            --remote_download_toplevel \
+          bazel build \
             -c "$mode" \
             //flutter_razemify/example:example_arm64 \
             //flutter_razemify/example:example_x64
