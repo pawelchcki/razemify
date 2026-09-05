@@ -164,16 +164,14 @@ fn resolve_palette(
     colors_str: &Option<String>,
 ) -> Result<Option<ColorPalette>, Box<dyn std::error::Error>> {
     if let Some(ref name) = palette_name {
-        return named_palette(name)
-            .map(Some)
-            .ok_or_else(|| {
-                format!(
-                    "Unknown palette '{}'. Available: {}",
-                    name,
-                    all_palette_names().join(", ")
-                )
-                .into()
-            });
+        return named_palette(name).map(Some).ok_or_else(|| {
+            format!(
+                "Unknown palette '{}'. Available: {}",
+                name,
+                all_palette_names().join(", ")
+            )
+            .into()
+        });
     }
 
     if let Some(ref colors) = colors_str {
@@ -232,7 +230,10 @@ fn load_model_or_warn(model_arg: Option<&Path>, model_type: ModelType) -> Option
             Some(model)
         }
         Err(e) => {
-            eprintln!("Warning: Failed to load model: {}. Will use existing alpha or opaque fallback.", e);
+            eprintln!(
+                "Warning: Failed to load model: {}. Will use existing alpha or opaque fallback.",
+                e
+            );
             None
         }
     }
@@ -327,7 +328,14 @@ fn apply_preset_to_image(
         .process(image, alpha)
         .map_err(|e| format!("{} [{}]: {}", image_path.display(), preset_name, e))?
         .save(output_path)
-        .map_err(|e| format!("{} [{}]: save failed: {}", image_path.display(), preset_name, e))?;
+        .map_err(|e| {
+            format!(
+                "{} [{}]: save failed: {}",
+                image_path.display(),
+                preset_name,
+                e
+            )
+        })?;
     eprintln!("  Done: {}", output_path.display());
     Ok(())
 }
@@ -427,12 +435,8 @@ fn cmd_batch(
     let mut all_errors = Vec::new();
 
     for (image_path, pending_presets) in &image_work {
-        total_processed += process_image_presets(
-            image_path,
-            pending_presets,
-            model.as_ref(),
-            &mut all_errors,
-        );
+        total_processed +=
+            process_image_presets(image_path, pending_presets, model.as_ref(), &mut all_errors);
     }
 
     eprintln!(

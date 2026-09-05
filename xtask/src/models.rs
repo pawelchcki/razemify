@@ -233,10 +233,12 @@ fn show_cache_info() -> Result<()> {
     println!("Cached Models:");
     for (filename, size) in &cached {
         let status = match MODELS.iter().find(|m| m.filename == *filename) {
-            Some(model) => match crate::verify::verify_checksum(&cache_dir.join(filename), model.sha256) {
-                Ok(true) => "✓",
-                _ => "✗",
-            },
+            Some(model) => {
+                match crate::verify::verify_checksum(&cache_dir.join(filename), model.sha256) {
+                    Ok(true) => "✓",
+                    _ => "✗",
+                }
+            }
             None => "?",
         };
         println!("  {} {:<50} {}", status, filename, format_size(*size));
@@ -294,13 +296,7 @@ async fn execute_r2_upload(
         println!("Warning: Could not make bucket public: {}", e);
     }
 
-    crate::r2::upload_file_to_r2(
-        r2_config,
-        model_path,
-        filename,
-        "application/octet-stream",
-    )
-    .await
+    crate::r2::upload_file_to_r2(r2_config, model_path, filename, "application/octet-stream").await
 }
 
 fn upload_to_r2(name: String, bucket: String) -> Result<()> {

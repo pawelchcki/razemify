@@ -524,12 +524,16 @@ fn resolve_requested_file(
     }
 }
 
-fn make_file_response(path: &Path, url_path: &str) -> tiny_http::Response<std::io::Cursor<Vec<u8>>> {
+fn make_file_response(
+    path: &Path,
+    url_path: &str,
+) -> tiny_http::Response<std::io::Cursor<Vec<u8>>> {
     let data = match fs::read(path) {
         Ok(data) => data,
         Err(e) => {
             eprintln!("Error reading file {}: {}", path.display(), e);
-            return tiny_http::Response::from_string("500 Internal Server Error").with_status_code(500);
+            return tiny_http::Response::from_string("500 Internal Server Error")
+                .with_status_code(500);
         }
     };
 

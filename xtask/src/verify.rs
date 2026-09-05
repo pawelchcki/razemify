@@ -6,8 +6,8 @@ use crate::cache::get_cache_dir;
 use crate::models::ModelInfo;
 
 pub fn compute_checksum(path: &Path) -> Result<String> {
-    let mut file =
-        std::fs::File::open(path).with_context(|| format!("Failed to open file: {}", path.display()))?;
+    let mut file = std::fs::File::open(path)
+        .with_context(|| format!("Failed to open file: {}", path.display()))?;
     let mut hasher = Sha256::new();
     std::io::copy(&mut file, &mut hasher)?;
     Ok(format!("{:x}", hasher.finalize()))
