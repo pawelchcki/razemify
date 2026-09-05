@@ -27,82 +27,57 @@ pub struct ModelInfo {
     pub description: &'static str,
 }
 
-impl ModelInfo {
-    #[allow(clippy::too_many_arguments)]
-    pub const fn new(
-        name: &'static str,
-        model_type: ModelType,
-        url: &'static str,
-        filename: &'static str,
-        size_bytes: u64,
-        sha256: &'static str,
-        input_size: u32,
-        description: &'static str,
-    ) -> Self {
-        Self {
-            name,
-            model_type,
-            url,
-            filename,
-            size_bytes,
-            sha256,
-            input_size,
-            description,
-        }
-    }
-}
-
 pub const MODELS: &[ModelInfo] = &[
-    ModelInfo::new(
-        "birefnet-lite",
-        ModelType::BiRefNet,
-        "https://github.com/danielgatis/rembg/releases/download/v0.0.0/BiRefNet-general-bb_swin_v1_tiny-epoch_232.onnx",
-        "BiRefNet-general-bb_swin_v1_tiny-epoch_232.onnx",
-        224_005_088,
-        "5600024376f572a557870a5eb0afb1e5961636bef4e1e22132025467d0f03333",
-        1024,
-        "BiRefNet lite - high quality, detailed edges",
-    ),
-    ModelInfo::new(
-        "u2net",
-        ModelType::U2Net,
-        "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx",
-        "u2net.onnx",
-        176_631_213,
-        "8d10d2f3bb75ae3b6d527c77944fc5e7dcd94b29809d47a739a7a728a912b491",
-        320,
-        "U2Net - fast, good quality",
-    ),
-    ModelInfo::new(
-        "isnet",
-        ModelType::ISNet,
-        "https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-general-use.onnx",
-        "isnet-general-use.onnx",
-        169_024_454,
-        "60920e99c45464f2ba57bee2ad08c919a52bbf852739e96947fbb4358c0d964a",
-        1024,
-        "ISNet - balanced quality and speed",
-    ),
-    ModelInfo::new(
-        "birefnet-portrait",
-        ModelType::BiRefNet,
-        "https://github.com/danielgatis/rembg/releases/download/v0.0.0/BiRefNet-portrait-epoch_150.onnx",
-        "BiRefNet-portrait-epoch_150.onnx",
-        972_666_916,
-        "1ba1c8ff5a7bbfadc8d8d13fb11d7be793f91f23d9d466549e37a854f6668f99",
-        1024,
-        "BiRefNet Portrait - optimized for people/portraits",
-    ),
-    ModelInfo::new(
-        "rmbg-1.4",
-        ModelType::Rmbg,
-        "https://huggingface.co/briaai/RMBG-1.4/resolve/main/onnx/model.onnx",
-        "rmbg-1.4.onnx",
-        176_153_355,
-        "8cafcf770b06757c4eaced21b1a88e57fd2b66de01b8045f35f01535ba742e0f",
-        1024,
-        "BRIA RMBG-1.4 - state-of-the-art background removal",
-    ),
+    ModelInfo {
+        name: "birefnet-lite",
+        model_type: ModelType::BiRefNet,
+        url: "https://github.com/danielgatis/rembg/releases/download/v0.0.0/BiRefNet-general-bb_swin_v1_tiny-epoch_232.onnx",
+        filename: "BiRefNet-general-bb_swin_v1_tiny-epoch_232.onnx",
+        size_bytes: 224_005_088,
+        sha256: "5600024376f572a557870a5eb0afb1e5961636bef4e1e22132025467d0f03333",
+        input_size: 1024,
+        description: "BiRefNet lite - high quality, detailed edges",
+    },
+    ModelInfo {
+        name: "u2net",
+        model_type: ModelType::U2Net,
+        url: "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx",
+        filename: "u2net.onnx",
+        size_bytes: 176_631_213,
+        sha256: "8d10d2f3bb75ae3b6d527c77944fc5e7dcd94b29809d47a739a7a728a912b491",
+        input_size: 320,
+        description: "U2Net - fast, good quality",
+    },
+    ModelInfo {
+        name: "isnet",
+        model_type: ModelType::ISNet,
+        url: "https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-general-use.onnx",
+        filename: "isnet-general-use.onnx",
+        size_bytes: 169_024_454,
+        sha256: "60920e99c45464f2ba57bee2ad08c919a52bbf852739e96947fbb4358c0d964a",
+        input_size: 1024,
+        description: "ISNet - balanced quality and speed",
+    },
+    ModelInfo {
+        name: "birefnet-portrait",
+        model_type: ModelType::BiRefNet,
+        url: "https://github.com/danielgatis/rembg/releases/download/v0.0.0/BiRefNet-portrait-epoch_150.onnx",
+        filename: "BiRefNet-portrait-epoch_150.onnx",
+        size_bytes: 972_666_916,
+        sha256: "1ba1c8ff5a7bbfadc8d8d13fb11d7be793f91f23d9d466549e37a854f6668f99",
+        input_size: 1024,
+        description: "BiRefNet Portrait - optimized for people/portraits",
+    },
+    ModelInfo {
+        name: "rmbg-1.4",
+        model_type: ModelType::Rmbg,
+        url: "https://huggingface.co/briaai/RMBG-1.4/resolve/main/onnx/model.onnx",
+        filename: "rmbg-1.4.onnx",
+        size_bytes: 176_153_355,
+        sha256: "8cafcf770b06757c4eaced21b1a88e57fd2b66de01b8045f35f01535ba742e0f",
+        input_size: 1024,
+        description: "BRIA RMBG-1.4 - state-of-the-art background removal",
+    },
 ];
 
 pub fn find_model_by_name(name: &str) -> Option<&'static ModelInfo> {
