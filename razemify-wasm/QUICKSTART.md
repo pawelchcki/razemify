@@ -5,8 +5,8 @@
 ### 1. Build the WASM Module
 
 ```bash
-cd rust/razemify-wasm
-wasm-pack build --target web --release
+cd /path/to/razemify
+bazel run //xtask -- wasm build --release
 ```
 
 This creates a `pkg/` directory with:
@@ -101,7 +101,7 @@ const palette = new ColorPalette("000000", "FF1493", "FFD700");
 ## 🐛 Common Issues
 
 **"Module not found"**
-- Make sure you built with `wasm-pack build --target web`
+- Make sure you built with `bazel run //xtask -- wasm build`
 - Check the import path points to `pkg/razemify_wasm.js`
 
 **"Failed to load WASM"**

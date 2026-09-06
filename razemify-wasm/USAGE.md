@@ -4,8 +4,8 @@
 
 1. Build the WASM module:
 ```bash
-cd rust/razemify-wasm
-wasm-pack build --target web --release
+cd /path/to/razemify
+bazel run //xtask -- wasm build --release
 ```
 
 2. Test locally:
@@ -246,7 +246,7 @@ Tested on:
 
 ### Module not found errors
 - Check the import path points to the correct pkg/ directory
-- Ensure wasm-pack build completed successfully
+- Ensure the Bazel WASM build completed successfully
 - Check file permissions on generated files
 
 ## Examples

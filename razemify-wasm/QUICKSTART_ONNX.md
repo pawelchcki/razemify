@@ -5,8 +5,8 @@ Get started with background removal in 5 minutes.
 ## 1. Build the WASM Package
 
 ```bash
-cd /home/pawel/repos/razemify/rust/razemify-wasm
-wasm-pack build --target web --release
+cd /path/to/razemify
+bazel run //xtask -- wasm build --release
 ```
 
 ## 2. Start Local Server

@@ -20,7 +20,7 @@ Before deploying, ensure the WASM package is built:
 
 ```bash
 # From the razemify-wasm directory
-wasm-pack build --target web --release
+bazel run //xtask -- wasm build --release
 ```
 
 This creates the `pkg/` directory with the compiled WASM files.
@@ -84,9 +84,8 @@ You can also:
 - Verify the WASM file is being served with `application/wasm` MIME type
 
 ### Build fails
-- Ensure `wasm-pack` is installed: `cargo install wasm-pack`
-- Check that `wasm32-unknown-unknown` target is installed: `rustup target add wasm32-unknown-unknown`
-- Verify dependencies are up to date: `cargo update`
+- Ensure Bazel or Bazelisk is installed and available on `PATH`
+- Run `bazel build //razemify-wasm:razemify_wasm` to inspect the Bazel error directly
 
 ### Deployment fails
 - Verify you're logged in: `wrangler whoami`
@@ -98,7 +97,7 @@ You can also:
 To update your deployment:
 
 1. Make changes to your code
-2. Rebuild the WASM package: `wasm-pack build --target web --release`
+2. Rebuild the WASM package: `bazel run //xtask -- wasm build --release`
 3. Run the deployment script: `./deploy-to-cloudflare.sh`
 
 Each deployment creates a new version, and Cloudflare Pages keeps a history of all deployments.

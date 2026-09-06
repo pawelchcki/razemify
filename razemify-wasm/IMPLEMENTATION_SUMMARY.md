@@ -84,17 +84,14 @@ Successfully implemented a WebAssembly module for the razemify image processing 
 
 **Configuration:**
 - Added release profile to workspace Cargo.toml
-- Configured wasm-pack for web target
-- Optimized with `wasm-opt` (automatic via wasm-pack)
+- Configured the Bazel `rust_wasm_bindgen` target for web output
+- Kept Rust and wasm-bindgen toolchains hermetic under Bazel
 
 **Build Commands:**
 ```bash
-# Install wasm-pack (one time)
-cargo install wasm-pack
-
 # Build WASM module
-cd rust/razemify-wasm
-wasm-pack build --target web --release
+cd /path/to/razemify
+bazel run //xtask -- wasm build --release
 
 # Test locally
 python3 -m http.server 8080 --directory www
@@ -103,9 +100,9 @@ python3 -m http.server 8080 --directory www
 ## Results
 
 ### Bundle Size
-- WASM binary: **2.4 MB** (uncompressed)
+- WASM binary: **approximately 5 MB** (uncompressed Bazel `opt` build)
 - JavaScript glue: **16 KB**
-- Total: **~2.4 MB**
+- Total: **approximately 5 MB**
 
 **Note:** Larger than initially estimated (~500KB) because it includes:
 - Full image format decoders (PNG, JPEG, WebP, etc.) from the `image` crate
