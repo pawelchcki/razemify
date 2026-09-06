@@ -13,15 +13,10 @@ actions:
       - run: bazel test --config=ci //...
 
       - run: |
-          mode=dbg
-          if [[ "$(git branch --show-current)" == "main" ]]; then
-            mode=opt
-          fi
-
           bazel build \
             --config=ci \
             --remote_download_toplevel \
-            -c "$mode" \
+            -c opt \
             //flutter_razemify/example:example_arm64 \
             //flutter_razemify/example:example_x64 \
             //razemify-wasm:razemify_wasm
