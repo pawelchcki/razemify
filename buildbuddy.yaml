@@ -10,16 +10,12 @@ actions:
     container_image: "ubuntu-24.04"
     timeout: "30m"
     steps:
-      - run: bazel test --config=ci //...
-
       - run: |
-          bazel build \
+          bazel test \
             --config=ci \
             --remote_download_toplevel \
             -c opt \
-            //flutter_razemify/example:example_arm64 \
-            //flutter_razemify/example:example_x64 \
-            //razemify-wasm:razemify_wasm
+            //...
 
           verify_apk() {
             local apk="$1"
