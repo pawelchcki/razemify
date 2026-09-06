@@ -18,9 +18,9 @@ This creates a `pkg/` directory with:
 
 ```bash
 # From the workspace root
-python3 -m http.server 8080 --directory razemify-wasm/www
+python3 -m http.server 8080 --directory razemify-wasm
 
-# Open in browser: http://localhost:8080
+# Open in browser: http://localhost:8080/www/
 ```
 
 The demo page lets you:

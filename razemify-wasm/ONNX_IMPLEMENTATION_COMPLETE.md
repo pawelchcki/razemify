@@ -106,10 +106,10 @@ bazel run //xtask -- wasm build --release
 
 ```bash
 # Option 1: Python
-python3 -m http.server 8000 --directory razemify-wasm/www
+python3 -m http.server 8000 --directory razemify-wasm
 
 # Option 2: Wrangler
-wrangler pages dev razemify-wasm/www
+wrangler pages dev razemify-wasm
 ```
 
 ### 3. Download Test Model
@@ -123,7 +123,7 @@ wget https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx
 
 ### 4. Test in Browser
 
-1. Open http://localhost:8000/
+1. Open http://localhost:8000/www/
 2. Check "Enable Background Removal"
 3. Upload u2net.onnx model (or select CDN)
 4. Upload test image
@@ -328,8 +328,8 @@ All plan requirements met:
 ```bash
 cd /path/to/razemify
 bazel run //xtask -- wasm build --release
-python3 -m http.server 8000 --directory razemify-wasm/www
-# Open http://localhost:8000/
+python3 -m http.server 8000 --directory razemify-wasm
+# Open http://localhost:8000/www/
 ```
 
 ### 2. Download Model

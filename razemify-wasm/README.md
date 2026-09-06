@@ -16,7 +16,8 @@ WebAssembly bindings for the razemify image processing library.
 bazel run //xtask -- wasm build --release
 
 # Test locally
-python3 -m http.server 8080 --directory razemify-wasm/www
+python3 -m http.server 8080 --directory razemify-wasm
+# Open http://localhost:8080/www/
 ```
 
 ## Deployment

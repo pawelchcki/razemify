@@ -13,12 +13,12 @@ bazel run //xtask -- wasm build --release
 
 ```bash
 # Simple Python server
-python3 -m http.server 8000 --directory razemify-wasm/www
+python3 -m http.server 8000 --directory razemify-wasm
 ```
 
 ## 3. Open in Browser
 
-Navigate to: http://localhost:8000/
+Navigate to: http://localhost:8000/www/
 
 ## 4. Enable Background Removal
 

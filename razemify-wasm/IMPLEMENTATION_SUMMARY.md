@@ -94,7 +94,7 @@ cd /path/to/razemify
 bazel run //xtask -- wasm build --release
 
 # Test locally
-python3 -m http.server 8080 --directory razemify-wasm/www
+python3 -m http.server 8080 --directory razemify-wasm
 ```
 
 ## Results
@@ -159,8 +159,8 @@ document.getElementById('output').src = URL.createObjectURL(blob);
 ## Testing
 
 ### Manual Testing
-1. Start local server: `python3 -m http.server 8080 --directory razemify-wasm/www`
-2. Open http://localhost:8080 in browser
+1. Start local server: `python3 -m http.server 8080 --directory razemify-wasm`
+2. Open http://localhost:8080/www/ in browser
 3. Select an image file
 4. Choose preset and palette
 5. Click "Process Image"

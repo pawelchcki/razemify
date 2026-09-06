@@ -122,7 +122,7 @@ See `../xtask/README.md` for model management.
 
 ## Testing
 
-**Reload the page**: http://localhost:8000/
+**Reload the page**: http://localhost:8000/www/
 
 **Test steps**:
 1. Check "Enable Background Removal" checkbox
