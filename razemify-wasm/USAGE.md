@@ -10,7 +10,7 @@ bazel run //xtask -- wasm build --release
 
 2. Test locally:
 ```bash
-python3 -m http.server 8080 --directory www
+python3 -m http.server 8080 --directory razemify-wasm/www
 # Open http://localhost:8080 in your browser
 ```
 

@@ -13,18 +13,18 @@ This guide walks through testing the new background removal feature.
 2. **Start a local server**:
    ```bash
    # Option 1: Python
-   python3 -m http.server 8000
+   python3 -m http.server 8000 --directory razemify-wasm/www
 
    # Option 2: Node.js
-   npx http-server -p 8000
+   npx http-server razemify-wasm/www -p 8000
 
    # Option 3: Wrangler (Cloudflare)
-   wrangler pages dev www
+   wrangler pages dev razemify-wasm/www
    ```
 
 3. **Open in browser**:
    ```
-   http://localhost:8000/www/
+   http://localhost:8000/
    ```
 
 ## Test Plan

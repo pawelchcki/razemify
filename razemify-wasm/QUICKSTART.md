@@ -17,8 +17,8 @@ This creates a `pkg/` directory with:
 ### 2. Test the Demo Page
 
 ```bash
-# From rust/razemify-wasm directory
-python3 -m http.server 8080 --directory www
+# From the workspace root
+python3 -m http.server 8080 --directory razemify-wasm/www
 
 # Open in browser: http://localhost:8080
 ```
