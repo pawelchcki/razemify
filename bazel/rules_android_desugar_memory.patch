@@ -1,0 +1,12 @@
+diff --git a/src/tools/java/com/google/devtools/build/android/r8/BUILD b/src/tools/java/com/google/devtools/build/android/r8/BUILD
+--- a/src/tools/java/com/google/devtools/build/android/r8/BUILD
++++ b/src/tools/java/com/google/devtools/build/android/r8/BUILD
+@@ -83,7 +83,7 @@ java_binary(
+         # b/71513487
+         "-XX:+TieredCompilation",
+         "-XX:TieredStopAtLevel=1",
+-        "-Xms8g",
++        "-Xms256m",
+         "-Xmx8g",
+     ],
+     main_class = "com.google.devtools.build.android.r8.Desugar",
