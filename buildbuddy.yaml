@@ -10,9 +10,13 @@ actions:
     container_image: "ubuntu-24.04"
     timeout: "30m"
     steps:
-      - run: bazel test --config=ci //...
-
       - run: |
+          bazel test \
+            --config=ci \
+            --remote_download_toplevel \
+            -c opt \
+            //...
+
           bazel build \
             --config=ci \
             --remote_download_toplevel \

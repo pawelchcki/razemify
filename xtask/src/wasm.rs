@@ -505,7 +505,61 @@ fn serve_wasm(port: u16, release: bool, open: bool) -> Result<()> {
     Ok(())
 }
 
+fn resolve_requested_file(
+    url_path: &str,
+    root: &Path,
+    canonical_root: &Path,
+) -> Option<std::path::PathBuf> {
+    let file_path = if url_path == "/" || url_path.is_empty() {
+        root.join("index.html")
+    } else {
+        root.join(url_path.trim_start_matches('/'))
+    };
+
+    let canonical = file_path.canonicalize().ok()?;
+    if canonical.starts_with(canonical_root) && canonical.is_file() {
+        Some(canonical)
+    } else {
+        None
+    }
+}
+
+fn make_file_response(
+    path: &Path,
+    url_path: &str,
+) -> tiny_http::Response<std::io::Cursor<Vec<u8>>> {
+    let data = match fs::read(path) {
+        Ok(data) => data,
+        Err(e) => {
+            eprintln!("Error reading file {}: {}", path.display(), e);
+            return tiny_http::Response::from_string("500 Internal Server Error")
+                .with_status_code(500);
+        }
+    };
+
+    let mime_type = get_mime_type(path);
+    let now = SystemTime::now();
+    println!("[{}] {} -> {}", format_time(now), url_path, mime_type);
+
+    let mut response = tiny_http::Response::from_data(data);
+    let headers = [
+        ("Cross-Origin-Embedder-Policy", "require-corp"),
+        ("Cross-Origin-Opener-Policy", "same-origin"),
+        ("Content-Type", mime_type),
+    ];
+    for (name, val) in headers {
+        if let Ok(header) = tiny_http::Header::from_bytes(name.as_bytes(), val.as_bytes()) {
+            response.add_header(header);
+        }
+    }
+    response
+}
+
 fn serve_static_files(server: &tiny_http::Server, root: &Path) -> Result<()> {
+    let canonical_root = root
+        .canonicalize()
+        .context("Failed to canonicalize root directory")?;
+
     loop {
         let request = match server.recv() {
             Ok(rq) => rq,
@@ -516,73 +570,9 @@ fn serve_static_files(server: &tiny_http::Server, root: &Path) -> Result<()> {
         };
 
         let url_path = request.url();
-
-        // Map URL path to file path
-        let file_path = if url_path == "/" || url_path.is_empty() {
-            root.join("index.html")
-        } else {
-            // Remove leading slash
-            let path = url_path.trim_start_matches('/');
-            root.join(path)
-        };
-
-        // Security: prevent directory traversal
-        let canonical_root = root
-            .canonicalize()
-            .context("Failed to canonicalize root directory")?;
-
-        let response = if let Ok(canonical_file) = file_path.canonicalize() {
-            if canonical_file.starts_with(&canonical_root) && canonical_file.is_file() {
-                // File exists and is within root
-                match fs::read(&canonical_file) {
-                    Ok(data) => {
-                        let mime_type = get_mime_type(&canonical_file);
-
-                        // Log request
-                        let now = SystemTime::now();
-                        println!("[{}] {} -> {}", format_time(now), url_path, mime_type);
-
-                        let mut response = tiny_http::Response::from_data(data);
-
-                        // Add CORS headers required for WASM
-                        response = response
-                            .with_header(
-                                tiny_http::Header::from_bytes(
-                                    &b"Cross-Origin-Embedder-Policy"[..],
-                                    &b"require-corp"[..],
-                                )
-                                .expect("Header name is valid ASCII"),
-                            )
-                            .with_header(
-                                tiny_http::Header::from_bytes(
-                                    &b"Cross-Origin-Opener-Policy"[..],
-                                    &b"same-origin"[..],
-                                )
-                                .expect("Header name is valid ASCII"),
-                            )
-                            .with_header(
-                                tiny_http::Header::from_bytes(
-                                    &b"Content-Type"[..],
-                                    mime_type.as_bytes(),
-                                )
-                                .expect("Header name is valid ASCII"),
-                            );
-
-                        response
-                    }
-                    Err(e) => {
-                        eprintln!("Error reading file {}: {}", canonical_file.display(), e);
-                        tiny_http::Response::from_string("500 Internal Server Error")
-                            .with_status_code(500)
-                    }
-                }
-            } else {
-                // File not found or outside root
-                tiny_http::Response::from_string("404 Not Found").with_status_code(404)
-            }
-        } else {
-            // File doesn't exist
-            tiny_http::Response::from_string("404 Not Found").with_status_code(404)
+        let response = match resolve_requested_file(url_path, root, &canonical_root) {
+            Some(file) => make_file_response(&file, url_path),
+            None => tiny_http::Response::from_string("404 Not Found").with_status_code(404),
         };
 
         if let Err(e) = request.respond(response) {
@@ -608,15 +598,14 @@ fn get_mime_type(path: &Path) -> &'static str {
 }
 
 fn format_time(time: SystemTime) -> String {
-    if let Ok(duration) = time.duration_since(UNIX_EPOCH) {
-        let secs = duration.as_secs();
-        let hours = (secs / 3600) % 24;
-        let minutes = (secs / 60) % 60;
-        let seconds = secs % 60;
-        format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
-    } else {
-        "??:??:??".to_string()
-    }
+    let Ok(duration) = time.duration_since(UNIX_EPOCH) else {
+        return "??:??:??".to_string();
+    };
+    let secs = duration.as_secs();
+    let hours = (secs / 3600) % 24;
+    let minutes = (secs / 60) % 60;
+    let seconds = secs % 60;
+    format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
 }
 
 fn open_browser(url: &str) -> Result<()> {
@@ -1077,12 +1066,8 @@ fn determine_branch(explicit_branch: Option<String>) -> Result<String> {
     Ok(branch)
 }
 
-fn get_git_commit_hash() -> Option<String> {
-    let output = Command::new("git")
-        .args(["rev-parse", "HEAD"])
-        .output()
-        .ok()?;
-
+fn git_cmd_stdout(args: &[&str]) -> Option<String> {
+    let output = Command::new("git").args(args).output().ok()?;
     if output.status.success() {
         Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
     } else {
@@ -1090,17 +1075,12 @@ fn get_git_commit_hash() -> Option<String> {
     }
 }
 
-fn get_git_commit_message() -> Option<String> {
-    let output = Command::new("git")
-        .args(["log", "-1", "--pretty=%B"])
-        .output()
-        .ok()?;
+fn get_git_commit_hash() -> Option<String> {
+    git_cmd_stdout(&["rev-parse", "HEAD"])
+}
 
-    if output.status.success() {
-        Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
-    } else {
-        None
-    }
+fn get_git_commit_message() -> Option<String> {
+    git_cmd_stdout(&["log", "-1", "--pretty=%B"])
 }
 
 fn deploy_wasm(

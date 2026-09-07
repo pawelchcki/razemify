@@ -107,36 +107,7 @@ impl RembgModel {
             image::imageops::FilterType::Lanczos3,
         );
 
-        // Normalize and convert to CHW layout (1, 3, H, W)
-        let mut input = Array4::<f32>::zeros((1, 3, input_size as usize, input_size as usize));
-
-        match self.model_type {
-            ModelType::U2Net => {
-                // Simple /255 normalization
-                for y in 0..input_size as usize {
-                    for x in 0..input_size as usize {
-                        let pixel = resized.get_pixel(x as u32, y as u32);
-                        input[[0, 0, y, x]] = pixel[0] as f32 / 255.0;
-                        input[[0, 1, y, x]] = pixel[1] as f32 / 255.0;
-                        input[[0, 2, y, x]] = pixel[2] as f32 / 255.0;
-                    }
-                }
-            }
-            ModelType::BiRefNet | ModelType::ISNet => {
-                // ImageNet normalization: (pixel/255 - mean) / std
-                for y in 0..input_size as usize {
-                    for x in 0..input_size as usize {
-                        let pixel = resized.get_pixel(x as u32, y as u32);
-                        for c in 0..3 {
-                            let val = pixel[c] as f32 / 255.0;
-                            input[[0, c, y, x]] = (val - IMAGENET_MEAN[c]) / IMAGENET_STD[c];
-                        }
-                    }
-                }
-            }
-        }
-
-        // Create tensor from ndarray
+        let input = prepare_input_tensor(&resized, self.model_type, input_size as usize);
         let input_tensor = Tensor::from_array(input)?;
 
         // Run inference
@@ -155,75 +126,106 @@ impl RembgModel {
         let mask_h = shape[2];
         let mask_w = shape[3];
 
-        // Process output according to model type
-        let mut mask = GrayImage::new(mask_w as u32, mask_h as u32);
-
-        match self.model_type {
+        let mask = match self.model_type {
             ModelType::U2Net | ModelType::ISNet => {
-                // Apply sigmoid, scale to [0,255]
-                for y in 0..mask_h {
-                    for x in 0..mask_w {
-                        let val = output_array[[0, 0, y, x]];
-                        let sig = sigmoid(val);
-                        mask.put_pixel(x as u32, y as u32, image::Luma([(sig * 255.0) as u8]));
-                    }
-                }
+                extract_standard_mask(&output_array, mask_w, mask_h)
             }
-            ModelType::BiRefNet => {
-                // Apply sigmoid, then min-max normalize to [0,1], scale to [0,255]
-                let mut sigmoid_values = vec![0.0f32; mask_h * mask_w];
-                let mut min_val = f32::MAX;
-                let mut max_val = f32::MIN;
-
-                for y in 0..mask_h {
-                    for x in 0..mask_w {
-                        let val = output_array[[0, 0, y, x]];
-                        let sig = sigmoid(val);
-                        sigmoid_values[y * mask_w + x] = sig;
-                        min_val = min_val.min(sig);
-                        max_val = max_val.max(sig);
-                    }
-                }
-
-                let range = max_val - min_val;
-                let range = if range < 1e-6 { 1.0 } else { range };
-
-                for y in 0..mask_h {
-                    for x in 0..mask_w {
-                        let normalized = (sigmoid_values[y * mask_w + x] - min_val) / range;
-                        mask.put_pixel(
-                            x as u32,
-                            y as u32,
-                            image::Luma([(normalized * 255.0) as u8]),
-                        );
-                    }
-                }
-            }
-        }
+            ModelType::BiRefNet => extract_birefnet_mask(&output_array, mask_w, mask_h),
+        };
 
         // Resize mask back to original dimensions
         let mask_resized =
             image::imageops::resize(&mask, orig_w, orig_h, image::imageops::FilterType::Lanczos3);
 
-        // Create RGBA image with alpha from mask
-        let rgb_orig = img.to_rgb8();
-        let mut rgba = RgbaImage::new(orig_w, orig_h);
-        for y in 0..orig_h {
-            for x in 0..orig_w {
-                let rgb_pixel = rgb_orig.get_pixel(x, y);
-                let alpha = mask_resized.get_pixel(x, y)[0];
-                // Threshold at 0.5 (128) for binary mask
-                let alpha_binary = if alpha > 128 { 255 } else { 0 };
-                rgba.put_pixel(
-                    x,
-                    y,
-                    image::Rgba([rgb_pixel[0], rgb_pixel[1], rgb_pixel[2], alpha_binary]),
-                );
-            }
-        }
-
-        Ok(rgba)
+        Ok(apply_alpha_mask(&rgb, &mask_resized))
     }
+}
+
+fn normalize_u2net(resized: &image::RgbImage, input_size: usize) -> Array4<f32> {
+    let mut input = Array4::<f32>::zeros((1, 3, input_size, input_size));
+    for (x, y, pixel) in resized.enumerate_pixels() {
+        let (x, y) = (x as usize, y as usize);
+        input[[0, 0, y, x]] = pixel[0] as f32 / 255.0;
+        input[[0, 1, y, x]] = pixel[1] as f32 / 255.0;
+        input[[0, 2, y, x]] = pixel[2] as f32 / 255.0;
+    }
+    input
+}
+
+fn normalize_imagenet(resized: &image::RgbImage, input_size: usize) -> Array4<f32> {
+    let mut input = Array4::<f32>::zeros((1, 3, input_size, input_size));
+    for (x, y, pixel) in resized.enumerate_pixels() {
+        let (x, y) = (x as usize, y as usize);
+        for c in 0..3 {
+            let val = pixel[c] as f32 / 255.0;
+            input[[0, c, y, x]] = (val - IMAGENET_MEAN[c]) / IMAGENET_STD[c];
+        }
+    }
+    input
+}
+
+fn prepare_input_tensor(
+    resized: &image::RgbImage,
+    model_type: ModelType,
+    input_size: usize,
+) -> Array4<f32> {
+    match model_type {
+        ModelType::U2Net => normalize_u2net(resized, input_size),
+        ModelType::BiRefNet | ModelType::ISNet => normalize_imagenet(resized, input_size),
+    }
+}
+
+fn extract_standard_mask(output: &ndarray::ArrayViewD<f32>, w: usize, h: usize) -> GrayImage {
+    let mut mask = GrayImage::new(w as u32, h as u32);
+    for y in 0..h {
+        for x in 0..w {
+            let sig = sigmoid(output[[0, 0, y, x]]);
+            mask.put_pixel(x as u32, y as u32, image::Luma([(sig * 255.0) as u8]));
+        }
+    }
+    mask
+}
+
+fn extract_birefnet_mask(output: &ndarray::ArrayViewD<f32>, w: usize, h: usize) -> GrayImage {
+    let mut sig_values = Vec::with_capacity(w * h);
+    let mut min_val = f32::MAX;
+    let mut max_val = f32::MIN;
+
+    for y in 0..h {
+        for x in 0..w {
+            let sig = sigmoid(output[[0, 0, y, x]]);
+            sig_values.push(sig);
+            min_val = min_val.min(sig);
+            max_val = max_val.max(sig);
+        }
+    }
+
+    let diff = max_val - min_val;
+    let range = if diff < 1e-6 { 1.0 } else { diff };
+
+    let mut mask = GrayImage::new(w as u32, h as u32);
+    for (i, &sig) in sig_values.iter().enumerate() {
+        let x = (i % w) as u32;
+        let y = (i / w) as u32;
+        let normalized = (sig - min_val) / range;
+        mask.put_pixel(x, y, image::Luma([(normalized * 255.0) as u8]));
+    }
+    mask
+}
+
+fn apply_alpha_mask(rgb: &image::RgbImage, mask: &GrayImage) -> RgbaImage {
+    let (w, h) = rgb.dimensions();
+    let mut rgba = RgbaImage::new(w, h);
+    for (x, y, pixel) in rgb.enumerate_pixels() {
+        let alpha = mask.get_pixel(x, y)[0];
+        let alpha_binary = if alpha > 128 { 255 } else { 0 };
+        rgba.put_pixel(
+            x,
+            y,
+            image::Rgba([pixel[0], pixel[1], pixel[2], alpha_binary]),
+        );
+    }
+    rgba
 }
 
 #[inline]
@@ -240,6 +242,16 @@ fn check_directory_for_models(
         .iter()
         .map(|filename| dir.join(filename))
         .find(|path| path.exists())
+}
+
+fn candidate_search_dirs() -> Vec<std::path::PathBuf> {
+    let mut dirs = Vec::new();
+    if let Some(home) = dirs_path() {
+        dirs.push(home.join(".razemify").join("models"));
+        dirs.push(home.join(".u2net"));
+    }
+    dirs.push(std::path::PathBuf::from("."));
+    dirs
 }
 
 /// Try to find a model path, searching for the preferred model type first.
@@ -262,30 +274,17 @@ pub fn find_model_path(
         }
     }
 
-    // 3. xtask cache directory (~/.razemify/models/)
+    let search_dirs = candidate_search_dirs();
+
+    // 3-5. Preferred model type in candidate directories
     let filenames = model_filenames(model_type);
-
-    if let Some(home) = dirs_path() {
-        let cache_dir = home.join(".razemify").join("models");
-        if let Some(path) = check_directory_for_models(&cache_dir, &filenames) {
+    for dir in &search_dirs {
+        if let Some(path) = check_directory_for_models(dir, &filenames) {
             return Some(path);
         }
     }
 
-    // 4. Legacy cache directory (~/.u2net/)
-    if let Some(home) = dirs_path() {
-        let cache_dir = home.join(".u2net");
-        if let Some(path) = check_directory_for_models(&cache_dir, &filenames) {
-            return Some(path);
-        }
-    }
-
-    // 5. Current directory
-    if let Some(path) = check_directory_for_models(&std::path::PathBuf::from("."), &filenames) {
-        return Some(path);
-    }
-
-    // 6. Fallback: try any known model file in xtask cache
+    // 6-8. Fallback: try any known model file in candidate directories
     let all_filenames = [
         "BiRefNet-general-bb_swin_v1_tiny-epoch_232.onnx",
         "BiRefNet-general-epoch_244.onnx",
@@ -293,26 +292,9 @@ pub fn find_model_path(
         "isnet-general-use.onnx",
     ];
 
-    if let Some(home) = dirs_path() {
-        let cache_dir = home.join(".razemify").join("models");
-        if let Some(path) = check_directory_for_models(&cache_dir, &all_filenames) {
+    for dir in &search_dirs {
+        if let Some(path) = check_directory_for_models(dir, &all_filenames) {
             return Some(path);
-        }
-    }
-
-    // 7. Fallback: try any known model file in legacy cache
-    if let Some(home) = dirs_path() {
-        let cache_dir = home.join(".u2net");
-        if let Some(path) = check_directory_for_models(&cache_dir, &all_filenames) {
-            return Some(path);
-        }
-    }
-
-    // 8. Fallback: try any known model file in current directory
-    for filename in &all_filenames {
-        let local = std::path::PathBuf::from(filename);
-        if local.exists() {
-            return Some(local);
         }
     }
 
@@ -348,14 +330,7 @@ fn dirs_path() -> Option<std::path::PathBuf> {
 /// Used as fallback when no model is available.
 pub fn extract_existing_alpha(img: &DynamicImage) -> Option<Vec<u8>> {
     if let DynamicImage::ImageRgba8(rgba) = img {
-        let (w, h) = rgba.dimensions();
-        let mut alpha = Vec::with_capacity((w * h) as usize);
-        for y in 0..h {
-            for x in 0..w {
-                alpha.push(rgba.get_pixel(x, y)[3]);
-            }
-        }
-        Some(alpha)
+        Some(rgba.pixels().map(|p| p[3]).collect())
     } else {
         None
     }
