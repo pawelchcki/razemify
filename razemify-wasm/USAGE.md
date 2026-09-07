@@ -4,14 +4,14 @@
 
 1. Build the WASM module:
 ```bash
-cd rust/razemify-wasm
-wasm-pack build --target web --release
+cd /path/to/razemify
+bazel run //xtask -- wasm build --release
 ```
 
 2. Test locally:
 ```bash
-python3 -m http.server 8080 --directory www
-# Open http://localhost:8080 in your browser
+python3 -m http.server 8080 --directory razemify-wasm
+# Open http://localhost:8080/www/ in your browser
 ```
 
 ## Integration
@@ -246,7 +246,7 @@ Tested on:
 
 ### Module not found errors
 - Check the import path points to the correct pkg/ directory
-- Ensure wasm-pack build completed successfully
+- Ensure the Bazel WASM build completed successfully
 - Check file permissions on generated files
 
 ## Examples

@@ -4,7 +4,7 @@
 set -e
 
 echo "🔨 Building WASM package..."
-wasm-pack build --target web --release
+bazel run //xtask -- wasm build --release
 
 echo ""
 echo "🚀 Deploying to Cloudflare Pages..."

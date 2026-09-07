@@ -5,15 +5,15 @@ Get started with background removal in 5 minutes.
 ## 1. Build the WASM Package
 
 ```bash
-cd /home/pawel/repos/razemify/rust/razemify-wasm
-wasm-pack build --target web --release
+cd /path/to/razemify
+bazel run //xtask -- wasm build --release
 ```
 
 ## 2. Start Local Server
 
 ```bash
 # Simple Python server
-python3 -m http.server 8000
+python3 -m http.server 8000 --directory razemify-wasm
 ```
 
 ## 3. Open in Browser

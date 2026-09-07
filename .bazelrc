@@ -24,6 +24,15 @@ build:buildbuddy --remote_download_toplevel
 build:buildbuddy --nolegacy_important_outputs
 build:buildbuddy --bes_upload_mode=fully_async
 
+# Publicly viewable BuildBuddy invocations and repository metadata
+build:buildbuddy --build_metadata=VISIBILITY=PUBLIC
+build:buildbuddy --build_metadata=REPO_URL=https://github.com/pawelchcki/razemify
+
+# CI runs on BuildBuddy Workflows with BuildBuddy cache and BES. Actions run on
+# the workflow runner because this organization has no remote-executor pool.
+build:ci --config=buildbuddy
+build:ci --build_metadata=ROLE=CI
+
 # //:clippy is a gate, so warnings must fail it -- the equivalent of
 # `cargo clippy -- -D warnings`.
 build --@rules_rs_internal//rust/settings:clippy_flag=-Dwarnings

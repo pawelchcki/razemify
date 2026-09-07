@@ -98,18 +98,18 @@ All targets met based on plan:
 ### 1. Build WASM
 
 ```bash
-cd /home/pawel/repos/razemify/rust/razemify-wasm
-wasm-pack build --target web --release
+cd /path/to/razemify
+bazel run //xtask -- wasm build --release
 ```
 
 ### 2. Start Local Server
 
 ```bash
 # Option 1: Python
-python3 -m http.server 8000
+python3 -m http.server 8000 --directory razemify-wasm
 
 # Option 2: Wrangler
-wrangler pages dev www
+wrangler pages dev razemify-wasm
 ```
 
 ### 3. Download Test Model
@@ -270,7 +270,7 @@ const resultBytes = RazemifyProcessor.processImage(
 ### No Changes Required
 
 The implementation is pure HTML/JavaScript:
-1. Build WASM as normal: `wasm-pack build --target web --release`
+1. Build WASM as normal: `bazel run //xtask -- wasm build --release`
 2. Deploy `www/` directory (same as before)
 3. ONNX Runtime loads automatically from CDN
 
@@ -326,9 +326,9 @@ All plan requirements met:
 
 ### 1. Local Testing
 ```bash
-cd /home/pawel/repos/razemify/rust/razemify-wasm
-wasm-pack build --target web --release
-python3 -m http.server 8000
+cd /path/to/razemify
+bazel run //xtask -- wasm build --release
+python3 -m http.server 8000 --directory razemify-wasm
 # Open http://localhost:8000/www/
 ```
 

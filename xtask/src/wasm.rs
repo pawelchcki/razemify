@@ -203,31 +203,71 @@ fn build_wasm(release: bool) -> Result<()> {
     }
 
     println!("Building WASM package...");
-    let mode = if release { "release" } else { "dev" };
-    println!("Mode: {}", mode);
+    let mode = if release { "opt" } else { "dbg" };
+    println!("Mode: {}", if release { "release" } else { "dev" });
 
-    let mut cmd = Command::new("wasm-pack");
-    cmd.arg("build")
-        .arg("--target")
-        .arg("web")
-        .current_dir(&wasm_dir);
-
-    if release {
-        cmd.arg("--release");
-    } else {
-        cmd.arg("--dev");
-    }
-
-    let status = cmd.status().context(
-        "Failed to run wasm-pack. Is wasm-pack installed? Install with: cargo install wasm-pack",
-    )?;
+    let status = Command::new("bazel")
+        .args([
+            "build",
+            "--remote_download_toplevel",
+            "-c",
+            mode,
+            "//razemify-wasm:razemify_wasm",
+        ])
+        .current_dir(&project_root)
+        .status()
+        .context("Failed to run Bazel. Install Bazelisk or Bazel and ensure it is on PATH")?;
 
     if !status.success() {
-        bail!("wasm-pack build failed");
+        bail!("Bazel WASM build failed");
     }
 
     let pkg_dir = wasm_dir.join("pkg");
+    let bazel_info = Command::new("bazel")
+        .args(["info", "bazel-bin", "-c", mode])
+        .current_dir(&project_root)
+        .output()
+        .context("Failed to locate Bazel output directory")?;
+    if !bazel_info.status.success() {
+        bail!("bazel info bazel-bin failed");
+    }
+
+    let bazel_bin = String::from_utf8(bazel_info.stdout)
+        .context("Bazel output directory is not valid UTF-8")?;
+    let generated_pkg = Path::new(bazel_bin.trim())
+        .join("razemify-wasm")
+        .join("razemify_wasm");
+
+    if pkg_dir.exists() {
+        fs::remove_dir_all(&pkg_dir).context(format!("Failed to clean {}", pkg_dir.display()))?;
+    }
+    copy_directory(&generated_pkg, &pkg_dir)?;
     println!("✓ WASM build complete: {}", pkg_dir.display());
+
+    Ok(())
+}
+
+fn copy_directory(source: &Path, destination: &Path) -> Result<()> {
+    fs::create_dir_all(destination)
+        .context(format!("Failed to create {}", destination.display()))?;
+
+    for entry in
+        fs::read_dir(source).context(format!("Failed to read directory: {}", source.display()))?
+    {
+        let entry = entry?;
+        let source_path = entry.path();
+        let destination_path = destination.join(entry.file_name());
+
+        if source_path.is_dir() {
+            copy_directory(&source_path, &destination_path)?;
+        } else {
+            fs::copy(&source_path, &destination_path).context(format!(
+                "Failed to copy {} to {}",
+                source_path.display(),
+                destination_path.display()
+            ))?;
+        }
+    }
 
     Ok(())
 }

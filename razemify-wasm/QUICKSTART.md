@@ -5,8 +5,8 @@
 ### 1. Build the WASM Module
 
 ```bash
-cd rust/razemify-wasm
-wasm-pack build --target web --release
+cd /path/to/razemify
+bazel run //xtask -- wasm build --release
 ```
 
 This creates a `pkg/` directory with:
@@ -17,10 +17,10 @@ This creates a `pkg/` directory with:
 ### 2. Test the Demo Page
 
 ```bash
-# From rust/razemify-wasm directory
-python3 -m http.server 8080 --directory www
+# From the workspace root
+python3 -m http.server 8080 --directory razemify-wasm
 
-# Open in browser: http://localhost:8080
+# Open in browser: http://localhost:8080/www/
 ```
 
 The demo page lets you:
@@ -101,7 +101,7 @@ const palette = new ColorPalette("000000", "FF1493", "FFD700");
 ## 🐛 Common Issues
 
 **"Module not found"**
-- Make sure you built with `wasm-pack build --target web`
+- Make sure you built with `bazel run //xtask -- wasm build`
 - Check the import path points to `pkg/razemify_wasm.js`
 
 **"Failed to load WASM"**

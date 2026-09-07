@@ -7,19 +7,17 @@ WebAssembly bindings for the razemify image processing library.
 - Posterize images with detailed algorithm
 - Preserve alpha channel transparency
 - Browser-friendly API
-- Small bundle size (~500KB)
+- Bazel-built web package with hermetic Rust and wasm-bindgen toolchains
 
 ## Building
 
 ```bash
-# Install wasm-pack
-cargo install wasm-pack
-
-# Build for web
-wasm-pack build --target web --release
+# Build for web with the hermetic Bazel toolchain
+bazel run //xtask -- wasm build --release
 
 # Test locally
-python3 -m http.server 8080 --directory www
+python3 -m http.server 8080 --directory razemify-wasm
+# Open http://localhost:8080/www/
 ```
 
 ## Deployment
@@ -107,9 +105,9 @@ Static processing methods.
 
 ## Bundle Size
 
-- WASM binary: ~300-500KB (with wasm-opt)
-- JavaScript glue: ~50KB
-- Total: **~500KB**
+- Optimized WASM binary: approximately 5 MB
+- JavaScript glue: approximately 16 KB
+- Exact size varies with dependencies and the selected Bazel compilation mode
 
 ## License
 

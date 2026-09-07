@@ -19,7 +19,7 @@ rust_shared_library(
 )
 
 # Applies the wasm32-unknown-unknown transition itself and runs wasm-bindgen,
-# producing the JS glue + .wasm as wasm-pack --target web would.
+# producing the JS glue, type declarations, and .wasm web package.
 rust_wasm_bindgen(
     name = "razemify_wasm",
     target = "web",

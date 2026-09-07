@@ -202,7 +202,7 @@ Background removal + posterization: Add 0.5-5s to normal processing time.
 Implementation is pure HTML/JavaScript - no Rust changes.
 
 ### Deployment Steps
-1. Build WASM as normal: `wasm-pack build --target web --release`
+1. Build WASM as normal: `bazel run //xtask -- wasm build --release`
 2. Deploy `www/` directory to Cloudflare Pages
 3. ONNX Runtime loaded from CDN at runtime
 

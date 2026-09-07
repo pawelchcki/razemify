@@ -6,20 +6,20 @@ This guide walks through testing the new background removal feature.
 
 1. **Build the WASM package**:
    ```bash
-   cd /home/pawel/repos/razemify/rust/razemify-wasm
-   wasm-pack build --target web --release
+   cd /path/to/razemify
+   bazel run //xtask -- wasm build --release
    ```
 
 2. **Start a local server**:
    ```bash
    # Option 1: Python
-   python3 -m http.server 8000
+   python3 -m http.server 8000 --directory razemify-wasm
 
    # Option 2: Node.js
-   npx http-server -p 8000
+   npx http-server razemify-wasm -p 8000
 
    # Option 3: Wrangler (Cloudflare)
-   wrangler pages dev www
+   wrangler pages dev razemify-wasm
    ```
 
 3. **Open in browser**:
