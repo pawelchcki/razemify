@@ -14,6 +14,7 @@ flutter_test(
 exports_files([
     "README.md",
     "defs.bzl",
+    "rules_android_desugar_memory.patch",
     "rules_android_manifest_log_determinism.patch",
     "rustix_determinism.patch",
     "rules_rs_bootstrap_determinism.patch",
