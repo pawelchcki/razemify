@@ -1,0 +1,14 @@
+--- a/cargo/private/cargo_build_script_runner/lib.rs
++++ b/cargo/private/cargo_build_script_runner/lib.rs
+@@ -340,6 +340,11 @@
+         value
+             .replace(&format!("{exec_root}/"), "${pwd}/")
+             .replace(&format!("{exec_root}\\"), "${pwd}\\")
++            // Flags such as `--remap-path-prefix=<exec_root>=.` (which build
++            // scripts see in CARGO_ENCODED_RUSTFLAGS and may echo back as
++            // `cargo:rustc-env`) follow the exec root with `=`. Leaving it
++            // unredacted bakes the per-action sandbox path into the output.
++            .replace(&format!("{exec_root}="), "${pwd}=")
+     }
+ 
+     /// Redact for env vars: uses the generic `${out_dir}` token, resolved
