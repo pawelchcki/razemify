@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 mod cache;
 mod download;
@@ -11,14 +11,13 @@ mod wasm;
 mod wasm_bundle;
 
 #[derive(Parser)]
-#[command(name = "xtask")]
-#[command(about = "Zanbergify automation tasks", long_about = None)]
+#[command(name = "xtask", about = "Zanbergify automation tasks")]
 struct Cli {
     #[command(subcommand)]
     command: Command,
 }
 
-#[derive(clap::Subcommand)]
+#[derive(Subcommand)]
 enum Command {
     /// Model management commands
     Models(models::ModelsCmd),
@@ -27,12 +26,8 @@ enum Command {
 }
 
 fn main() -> Result<()> {
-    let cli = Cli::parse();
-
-    match cli.command {
-        Command::Models(cmd) => cmd.run()?,
-        Command::Wasm(cmd) => cmd.run()?,
+    match Cli::parse().command {
+        Command::Models(cmd) => cmd.run(),
+        Command::Wasm(cmd) => cmd.run(),
     }
-
-    Ok(())
 }

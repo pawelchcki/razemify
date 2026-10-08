@@ -23,43 +23,38 @@ pub struct ComicParams {
 }
 
 impl ComicParams {
-    /// Classic comic look: thick outlines, moderate contrast.
-    pub fn comic_bold() -> Self {
+    const fn new(
+        thresh_low: u8,
+        thresh_high: u8,
+        clip_limit: f64,
+        tile_size: u32,
+        edge_threshold: u8,
+        edge_width: u8,
+    ) -> Self {
         Self {
-            thresh_low: 80,
-            thresh_high: 160,
-            clip_limit: 3.0,
-            tile_size: 8,
-            edge_threshold: 40,
-            edge_width: 3,
+            thresh_low,
+            thresh_high,
+            clip_limit,
+            tile_size,
+            edge_threshold,
+            edge_width,
             palette: PALETTE_ORIGINAL,
         }
+    }
+
+    /// Classic comic look: thick outlines, moderate contrast.
+    pub fn comic_bold() -> Self {
+        Self::new(80, 160, 3.0, 8, 40, 3)
     }
 
     /// Pen-and-ink style: thin detailed lines, lower threshold catches finer detail.
     pub fn comic_fine() -> Self {
-        Self {
-            thresh_low: 80,
-            thresh_high: 160,
-            clip_limit: 3.0,
-            tile_size: 8,
-            edge_threshold: 25,
-            edge_width: 1,
-            palette: PALETTE_ORIGINAL,
-        }
+        Self::new(80, 160, 3.0, 8, 25, 1)
     }
 
     /// Gritty high-contrast: stronger CLAHE + medium edges.
     pub fn comic_heavy() -> Self {
-        Self {
-            thresh_low: 70,
-            thresh_high: 150,
-            clip_limit: 4.5,
-            tile_size: 8,
-            edge_threshold: 50,
-            edge_width: 2,
-            palette: PALETTE_ORIGINAL,
-        }
+        Self::new(70, 150, 4.5, 8, 50, 2)
     }
 
     pub fn from_preset(name: &str) -> Option<Self> {

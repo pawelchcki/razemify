@@ -25,34 +25,26 @@ pub struct DetailedParams {
 }
 
 impl DetailedParams {
-    pub fn detailed_standard() -> Self {
+    const fn new(thresh_low: u8, thresh_high: u8, clip_limit: f64, tile_size: u32) -> Self {
         Self {
-            thresh_low: 80,
-            thresh_high: 160,
-            clip_limit: 3.0,
-            tile_size: 8,
+            thresh_low,
+            thresh_high,
+            clip_limit,
+            tile_size,
             palette: PALETTE_ORIGINAL,
         }
+    }
+
+    pub fn detailed_standard() -> Self {
+        Self::new(80, 160, 3.0, 8)
     }
 
     pub fn detailed_strong() -> Self {
-        Self {
-            thresh_low: 70,
-            thresh_high: 150,
-            clip_limit: 4.0,
-            tile_size: 8,
-            palette: PALETTE_ORIGINAL,
-        }
+        Self::new(70, 150, 4.0, 8)
     }
 
     pub fn detailed_fine() -> Self {
-        Self {
-            thresh_low: 80,
-            thresh_high: 160,
-            clip_limit: 2.5,
-            tile_size: 4,
-            palette: PALETTE_ORIGINAL,
-        }
+        Self::new(80, 160, 2.5, 4)
     }
 
     pub fn from_preset(name: &str) -> Option<Self> {
@@ -82,22 +74,13 @@ impl DetailedParams {
 /// Convert RGB to grayscale using BT.601 integer formula (matches OpenCV).
 /// gray = (R*4899 + G*9617 + B*1868 + 8192) >> 14
 pub fn rgb_to_grayscale(img: &DynamicImage) -> Vec<u8> {
-    let (w, h) = img.dimensions();
-    let rgb = img.to_rgb8();
-    let mut gray = Vec::with_capacity((w * h) as usize);
-
-    for y in 0..h {
-        for x in 0..w {
-            let pixel = rgb.get_pixel(x, y);
-            let r = pixel[0] as u32;
-            let g = pixel[1] as u32;
-            let b = pixel[2] as u32;
-            let val = (r * 4899 + g * 9617 + b * 1868 + 8192) >> 14;
-            gray.push(val.min(255) as u8);
-        }
-    }
-
-    gray
+    img.to_rgb8()
+        .pixels()
+        .map(|p| {
+            let (r, g, b) = (p[0] as u32, p[1] as u32, p[2] as u32);
+            ((r * 4899 + g * 9617 + b * 1868 + 8192) >> 14).min(255) as u8
+        })
+        .collect()
 }
 
 /// Extract alpha channel from an image using background removal model or fallback.
@@ -106,41 +89,23 @@ pub fn extract_alpha(
     img: &DynamicImage,
     model: Option<&RembgModel>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let (width, height) = img.dimensions();
-
     if let Some(model) = model {
         let rgba = model.remove_background(img)?;
-        let mut alpha = Vec::with_capacity((width * height) as usize);
-        for y in 0..height {
-            for x in 0..width {
-                alpha.push(rgba.get_pixel(x, y)[3]);
-            }
-        }
-        Ok(alpha)
+        Ok(rgba.pixels().map(|p| p[3]).collect())
     } else if let Some(existing_alpha) = extract_existing_alpha(img) {
         Ok(existing_alpha)
     } else {
-        // No model and no alpha - assume fully opaque
+        let (width, height) = img.dimensions();
         Ok(vec![255u8; (width * height) as usize])
     }
 }
 
 /// Extract alpha channel from an image (without rembg support).
 pub fn extract_alpha_from_image(img: &DynamicImage) -> Vec<u8> {
-    let (width, height) = img.dimensions();
-
-    // Try to extract existing alpha channel
     if img.color().has_alpha() {
-        let rgba = img.to_rgba8();
-        let mut alpha = Vec::with_capacity((width * height) as usize);
-        for y in 0..height {
-            for x in 0..width {
-                alpha.push(rgba.get_pixel(x, y)[3]);
-            }
-        }
-        alpha
+        img.to_rgba8().pixels().map(|p| p[3]).collect()
     } else {
-        // No alpha channel - assume fully opaque
+        let (width, height) = img.dimensions();
         vec![255u8; (width * height) as usize]
     }
 }
@@ -234,26 +199,21 @@ impl AlgorithmParams {
 
     /// Look up a preset by name across both algorithm families.
     pub fn from_preset(name: &str) -> Option<Self> {
-        if let Some(p) = DetailedParams::from_preset(name) {
-            return Some(AlgorithmParams::Detailed(p));
-        }
-        if let Some(p) = ComicParams::from_preset(name) {
-            return Some(AlgorithmParams::Comic(p));
-        }
-        None
+        DetailedParams::from_preset(name)
+            .map(AlgorithmParams::Detailed)
+            .or_else(|| ComicParams::from_preset(name).map(AlgorithmParams::Comic))
     }
 
     /// All presets from both algorithm families.
     pub fn all_presets() -> Vec<(&'static str, Self)> {
-        let mut result: Vec<(&'static str, Self)> = DetailedParams::all_presets()
+        DetailedParams::all_presets()
             .into_iter()
             .map(|(name, p)| (name, AlgorithmParams::Detailed(p)))
-            .collect();
-        result.extend(
-            ComicParams::all_presets()
-                .into_iter()
-                .map(|(name, p)| (name, AlgorithmParams::Comic(p))),
-        );
-        result
+            .chain(
+                ComicParams::all_presets()
+                    .into_iter()
+                    .map(|(name, p)| (name, AlgorithmParams::Comic(p))),
+            )
+            .collect()
     }
 }

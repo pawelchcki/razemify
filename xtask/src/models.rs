@@ -175,6 +175,13 @@ fn list_models() -> Result<()> {
     Ok(())
 }
 
+fn resolve_target_model(name: Option<String>) -> Result<&'static ModelInfo> {
+    let Some(name) = name else {
+        bail!("Specify a model name or use --all");
+    };
+    find_model_by_name(&name).ok_or_else(|| anyhow::anyhow!("Unknown model: {}", name))
+}
+
 fn download_models(name: Option<String>, all: bool) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
 
@@ -183,12 +190,9 @@ fn download_models(name: Option<String>, all: bool) -> Result<()> {
             rt.block_on(download_model(model))?;
             println!();
         }
-    } else if let Some(name) = name {
-        let model =
-            find_model_by_name(&name).ok_or_else(|| anyhow::anyhow!("Unknown model: {}", name))?;
-        rt.block_on(download_model(model))?;
     } else {
-        bail!("Specify a model name or use --all");
+        let model = resolve_target_model(name)?;
+        rt.block_on(download_model(model))?;
     }
 
     Ok(())
@@ -203,21 +207,16 @@ fn verify_models(name: Option<String>, all: bool) -> Result<()> {
         }
 
         for (filename, _) in cached {
-            if let Some(model) = MODELS.iter().find(|m| m.filename == filename) {
-                verify_model(model)?;
-            } else {
-                println!("Unknown model file: {}", filename);
+            match MODELS.iter().find(|m| m.filename == filename) {
+                Some(model) => verify_model(model)?,
+                None => println!("Unknown model file: {}", filename),
             }
         }
-    } else if let Some(name) = name {
-        let model =
-            find_model_by_name(&name).ok_or_else(|| anyhow::anyhow!("Unknown model: {}", name))?;
-        verify_model(model)?;
-    } else {
-        bail!("Specify a model name or use --all");
+        return Ok(());
     }
 
-    Ok(())
+    let model = resolve_target_model(name)?;
+    verify_model(model)
 }
 
 fn show_cache_info() -> Result<()> {
@@ -225,7 +224,6 @@ fn show_cache_info() -> Result<()> {
     println!("Model Cache: {}\n", cache_dir.display());
 
     let cached = list_cached_models()?;
-
     if cached.is_empty() {
         println!("No models cached");
         println!("\nDownload models with: cargo xtask models download <name>");
@@ -234,13 +232,14 @@ fn show_cache_info() -> Result<()> {
 
     println!("Cached Models:");
     for (filename, size) in &cached {
-        let status = if let Some(model) = MODELS.iter().find(|m| m.filename == filename) {
-            match crate::verify::verify_checksum(&cache_dir.join(filename), model.sha256) {
-                Ok(true) => "✓",
-                _ => "✗",
+        let status = match MODELS.iter().find(|m| m.filename == *filename) {
+            Some(model) => {
+                match crate::verify::verify_checksum(&cache_dir.join(filename), model.sha256) {
+                    Ok(true) => "✓",
+                    _ => "✗",
+                }
             }
-        } else {
-            "?"
+            None => "?",
         };
         println!("  {} {:<50} {}", status, filename, format_size(*size));
     }
@@ -257,12 +256,9 @@ fn clean_cache(all: bool, name: Option<String>) -> Result<()> {
         for (filename, _) in cached {
             clean_model(&filename)?;
         }
-    } else if let Some(name) = name {
-        let model =
-            find_model_by_name(&name).ok_or_else(|| anyhow::anyhow!("Unknown model: {}", name))?;
-        clean_model(model.filename)?;
     } else {
-        bail!("Specify a model name or use --all");
+        let model = resolve_target_model(name)?;
+        clean_model(model.filename)?;
     }
 
     Ok(())
@@ -274,14 +270,41 @@ fn bundle_model(name: String, dest: String) -> Result<()> {
     bundle_model_for_wasm(model, &dest)
 }
 
+fn get_cloudflare_token() -> Result<String> {
+    std::env::var("CLOUDFLARE_API_TOKEN")
+        .or_else(|_| std::env::var("CF_API_TOKEN"))
+        .context(
+            "CLOUDFLARE_API_TOKEN not found in environment\n\n\
+             Set it with: export CLOUDFLARE_API_TOKEN=your_token_here\n\
+             Get your token from: https://dash.cloudflare.com/profile/api-tokens",
+        )
+}
+
+async fn execute_r2_upload(
+    r2_config: &crate::r2::R2Config,
+    model_path: &std::path::Path,
+    filename: &str,
+) -> Result<String> {
+    if let Err(e) = crate::r2::set_bucket_cors(r2_config).await {
+        println!(
+            "Warning: Could not set CORS (bucket may not exist or already configured): {}",
+            e
+        );
+    }
+
+    if let Err(e) = crate::r2::make_bucket_public(r2_config).await {
+        println!("Warning: Could not make bucket public: {}", e);
+    }
+
+    crate::r2::upload_file_to_r2(r2_config, model_path, filename, "application/octet-stream").await
+}
+
 fn upload_to_r2(name: String, bucket: String) -> Result<()> {
     let model =
         find_model_by_name(&name).ok_or_else(|| anyhow::anyhow!("Unknown model: {}", name))?;
 
-    // Get model file path from cache
     let cache_dir = get_cache_dir()?;
     let model_path = cache_dir.join(model.filename);
-
     if !model_path.exists() {
         bail!(
             "Model not found in cache. Download it first with: cargo xtask models download {}",
@@ -289,22 +312,10 @@ fn upload_to_r2(name: String, bucket: String) -> Result<()> {
         );
     }
 
-    // Verify model before uploading
     verify_model(model)?;
 
-    // Get Cloudflare credentials
-    let api_token = std::env::var("CLOUDFLARE_API_TOKEN")
-        .or_else(|_| std::env::var("CF_API_TOKEN"))
-        .context(
-            "CLOUDFLARE_API_TOKEN not found in environment\n\n\
-             Set it with: export CLOUDFLARE_API_TOKEN=your_token_here\n\
-             Get your token from: https://dash.cloudflare.com/profile/api-tokens",
-        )?;
-
-    // Upload to R2
+    let api_token = get_cloudflare_token()?;
     let rt = tokio::runtime::Runtime::new()?;
-
-    // Get account ID from API
     let account_id = rt.block_on(crate::wasm::get_account_id(&api_token))?;
 
     let r2_config = crate::r2::R2Config {
@@ -318,29 +329,7 @@ fn upload_to_r2(name: String, bucket: String) -> Result<()> {
     println!("  Bucket: {}", bucket);
     println!();
 
-    let public_url = rt.block_on(async {
-        // First, ensure CORS is configured
-        if let Err(e) = crate::r2::set_bucket_cors(&r2_config).await {
-            println!(
-                "Warning: Could not set CORS (bucket may not exist or already configured): {}",
-                e
-            );
-        }
-
-        // Make bucket public
-        if let Err(e) = crate::r2::make_bucket_public(&r2_config).await {
-            println!("Warning: Could not make bucket public: {}", e);
-        }
-
-        // Upload the model
-        crate::r2::upload_file_to_r2(
-            &r2_config,
-            &model_path,
-            model.filename,
-            "application/octet-stream",
-        )
-        .await
-    })?;
+    let public_url = rt.block_on(execute_r2_upload(&r2_config, &model_path, model.filename))?;
 
     println!("\n✓ Model uploaded successfully!");
     println!("\nPublic URL: {}", public_url);
