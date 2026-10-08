@@ -9,6 +9,14 @@ actions:
           - "*"
     container_image: "ubuntu-24.04"
     timeout: "30m"
+    # The default Linux workflow VM (3 CPU, 8GB RAM, 20GB disk) runs out of
+    # disk once the Android SDK/NDK, LLVM, Flutter and JDK repositories, the
+    # fastbuild and opt output trees, and the recycled runner's state add up,
+    # and 3 CPUs make every remote-cache miss slow.
+    resource_requests:
+      cpu: 16
+      memory: 32GB
+      disk: 60GB
     steps:
       - run: bazel test --config=ci //...
 

@@ -35,7 +35,6 @@ build:buildbuddy --experimental_remote_downloader_local_fallback
 build:buildbuddy --remote_timeout=10m
 build:buildbuddy --remote_cache_compression
 build:buildbuddy --remote_cache_async
-build:buildbuddy --remote_download_toplevel
 build:buildbuddy --nolegacy_important_outputs
 build:buildbuddy --bes_upload_mode=fully_async
 
