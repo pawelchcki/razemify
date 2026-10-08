@@ -16,5 +16,5 @@ exports_files([
     "defs.bzl",
     "rules_android_manifest_log_determinism.patch",
     "rustix_determinism.patch",
-    "rules_rs_bootstrap_determinism.patch",
+    "rules_rs_build_script_env_determinism.patch",
 ])

@@ -10,6 +10,21 @@ common --tool_java_runtime_version=remotejdk_25
 # Match Gradle's manifest merger: plugin library permissions must reach the APK.
 common --merge_android_manifest_permissions
 
+# Hermeticity. Every toolchain (LLVM, Rust, JDK, Android SDK/NDK, Dart/Flutter,
+# Go) is downloaded and checksummed, so no action needs the network, and no
+# host C/C++ compiler may be autodetected as a fallback toolchain.
+common --sandbox_default_allow_network=false
+common --repo_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
+# Persistent workers (Javac, Kotlin, Android tools) otherwise run unsandboxed
+# and can read undeclared inputs from the execroot.
+common --worker_sandboxing
+
+# A disk cache shared by every checkout and worktree on this machine: action
+# keys are independent of the workspace path, so a fresh worktree reuses the
+# outputs of all others instead of rebuilding from scratch.
+common --disk_cache=~/.cache/bazel-disk-cache
+common --experimental_disk_cache_gc_max_size=60G
+
 # BuildBuddy is opt-in so a fresh clone works without credentials. See
 # user.bazelrc.example; --config=remote also enables this cache/BES config.
 build:buildbuddy --bes_backend=grpcs://remote.buildbuddy.io
@@ -32,6 +47,14 @@ build:buildbuddy --build_metadata=REPO_URL=https://github.com/pawelchcki/razemif
 # the workflow runner because this organization has no remote-executor pool.
 build:ci --config=buildbuddy
 build:ci --build_metadata=ROLE=CI
+# The runner's output base and the BuildBuddy cache already cover what the
+# local disk cache would, without spending runner disk on a third copy.
+common:ci --disk_cache=
+# Fail rather than silently re-resolve when MODULE.bazel.lock is stale.
+common:ci --lockfile_mode=error
+# Only download what a step inspects; steps that need artifacts on disk pass
+# --remote_download_toplevel explicitly.
+build:ci --remote_download_minimal
 
 # //:clippy is a gate, so warnings must fail it -- the equivalent of
 # `cargo clippy -- -D warnings`.
