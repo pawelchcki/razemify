@@ -1,5 +1,6 @@
 actions:
   - name: "Build and Test"
+    self_hosted: false
     triggers:
       push:
         branches:
